@@ -385,6 +385,73 @@ describe("getSecureRandomInt", () => {
         // The 4 characters should be roughly equally sampled across 5000 iterations × 3 chars = 15000 samples.
         for (const c of "abAB") expect(counts[c]).toBeGreaterThan(2000);
       });
+
+      it("must map category-index picks to distinct positions before shuffle (deterministic mock)", () => {
+        // Prove each category contributes exactly one character from its own pool,
+        // even when length === categories.length and all pools have >1 option.
+        const realCrypto = globalThis.crypto;
+        // 2 categories × 3 options each, length=2 (no extras).
+        // Sample stream: cat0 picks index 0 → 'A', then shuffle i=1 j=rand(2)→index [0 or 1].
+        const samples = [0]; // cat0 picks index 0 ('A')
+        let sampleIndex = 0;
+        Object.defineProperty(globalThis, "crypto", {
+          configurable: true,
+          writable: true,
+          value: {
+            getRandomValues(array: Uint32Array) {
+              array[0] = samples[sampleIndex++];
+              return array;
+            },
+          },
+        });
+        try {
+          const pw = generateComplexPassword(2, [['A', 'B', 'C'], ['1', '2', '3']]);
+          expect(pw.length).toBe(2);
+          // First category picks index 0 → 'A'. The other char is the extra from shuffle.
+          expect([...pw]).toContain('A');
+          expect([...pw].some(c => '123'.includes(c))).toBe(true);
+        } finally {
+          Object.defineProperty(globalThis, "crypto", {
+            configurable: true,
+            writable: true,
+            value: realCrypto,
+          });
+        }
+      });
+
+      it("must coerce non-string sub-array elements via join and produce valid output", () => {
+        // Numbers in category sub-arrays get joined to strings — behavior should be consistent.
+        const categories = [['A', 'B'], [1, 2]] as unknown as string[][];
+        for (let i = 0; i < 50; i++) {
+          const pw = generateComplexPassword(4, categories);
+          expect(pw.length).toBe(4);
+          // Cat0 contributes A or B; cat1 contributes '1' or '2'.
+          expect([...pw].some(c => 'AB'.includes(c))).toBe(true);
+          expect([...pw].some(c => '12'.includes(c))).toBe(true);
+        }
+      });
+
+      it("must treat null and undefined elements in category sub-arrays via join coercion", () => {
+        // [null, 'X'].join('') === "nullX" — verify the function handles this without crashing.
+        const categories = [['A', 'B'], [null, '1']] as unknown as string[][];
+        for (let i = 0; i < 50; i++) {
+          const pw = generateComplexPassword(4, categories);
+          expect(pw.length).toBe(4);
+          // Cat0: A or B. Cat1: "nullX" after join — includes 'n','u','l','X','1'.
+          expect([...pw].some(c => 'AB'.includes(c))).toBe(true);
+        }
+      });
+
+      it("must pass guard check for category where all entries are non-empty strings", () => {
+        // Verify the guard at categories.some(c => c.join('').length === 0) correctly
+        // allows a valid category while rejecting one that would yield zero-length.
+        const validCats = [['A', 'B'], ['1', '!']];
+        expect(generateComplexPassword(4, validCats).length).toBeGreaterThanOrEqual(2);
+
+        // One empty-entry category must trigger the guard and return "".
+        const invalidCats = [['A', 'B'], ['']];
+        expect(generateComplexPassword(10, invalidCats)).toBe("");
+      });
     });
   });
 
