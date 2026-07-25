@@ -727,6 +727,23 @@ describe("copyTextToClipboard", () => {
     expect(createElementSpy).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
   });
+
+  it("rejects oversized text with null bytes before any DOM manipulation", async () => {
+    const createElementSpy = vi.fn();
+    vi.stubGlobal("document", {
+      createElement: createElementSpy,
+      execCommand: (_cmd: string) => true,
+      body: { appendChild: vi.fn(), removeChild: vi.fn() },
+    });
+
+    // Build text that exceeds limit via null bytes (single-byte in Blob.size but multi-char in JS)
+    const oversized = "x".repeat(10240) + "\0";
+    const result = await copyTextToClipboard(undefined, oversized);
+
+    expect(result).toBe(false);
+    expect(createElementSpy).not.toHaveBeenCalled(); // rejected before DOM work at size guard line 100-101
+    vi.unstubAllGlobals();
+  });
 });
 
 describe("probeClipboard", () => {
