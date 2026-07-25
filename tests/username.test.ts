@@ -94,6 +94,52 @@ describe("username generation", () => {
       const uniqueCount = new Set(usernames).size;
       expect(uniqueCount).toBe(usernames.length);
     });
+
+    it("produces all-unique results in a large batch (stress dedup)", () => {
+      // Verifies the Set-based dedup contract holds at scale.
+      const COUNT = 500;
+      for (let run = 0; run < 3; run++) {
+        const usernames = generateUsernames(COUNT);
+        expect(usernames).toHaveLength(COUNT);
+
+        const uniqueSet = new Set(usernames);
+        expect(uniqueSet.size).toBe(COUNT);
+
+        // Every item matches the contract format and uses defined vocabulary.
+        for (const u of usernames) {
+          expect(u).toMatch(/^[A-Z][a-z]+_[A-Z][a-z]+_[0-9]{4}$/);
+          const [adj, noun] = u.split("_");
+          expect(USERNAME_ADJECTIVES).toContain(adj.toLowerCase());
+          expect(USERNAME_NOUNS).toContain(noun.toLowerCase());
+        }
+      }
+    });
+
+    it("returns fewer items than requested when maxAttempts is exhausted", () => {
+      // Verifies observable contract: generator returns whatever unique
+      // usernames were found within the attempt budget, without throwing.
+      const lowMaxAttempts = 10;
+      const result = generateUsernames(100, lowMaxAttempts);
+      expect(result.length).toBeLessThanOrEqual(100);
+      expect(result.length).toBeGreaterThan(0);
+
+      // Even truncated results must be unique and well-formed.
+      const uniqueSet = new Set(result);
+      expect(uniqueSet.size).toBe(result.length);
+      for (const u of result) {
+        expect(u).toMatch(/^[A-Z][a-z]+_[A-Z][a-z]+_[0-9]{4}$/);
+      }
+    });
+
+    it("never returns malformed usernames under repeated generation", () => {
+      // Regression test: ensures capitalize + join contract survives
+      // high-volume generation without format drift.
+      const SAMPLES = 1000;
+      for (let i = 0; i < SAMPLES; i++) {
+        const username = generateUsername();
+        expect(username).toMatch(/^[A-Z][a-z]+_[A-Z][a-z]+_[0-9]{4}$/);
+      }
+    });
   });
 
   it("matches the pattern [A-Z][a-z]+_[A-Z][a-z]+_[0-9]+", () => {
