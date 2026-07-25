@@ -276,10 +276,37 @@ describe("getSecureRandomInt", () => {
   it("aborts after MAX_ATTEMPTS when crypto always returns values above threshold", () => {
     const realCrypto = (globalThis as any).crypto;
     // max=7: range=7, UINT32_MODULUS % 7 = 4, threshold = UINT32_MODULUS - 4
+    let callCount = 0;
     Object.defineProperty(globalThis, "crypto", {
       value: {
         getRandomValues(arr: Uint32Array) {
           arr[0] = 0xFFFFFFFF; // always above any valid threshold
+          callCount++;
+          return arr;
+        },
+      },
+      configurable: true,
+      writable: true,
+    });
+    try {
+      expect(() => getSecureRandomInt(7)).toThrow("Rejection sampling exhausted");
+      // Verify loop makes exactly MAX_ATTEMPTS iterations before aborting
+      expect(callCount).toBe(256);
+    } finally {
+      Object.defineProperty(globalThis, "crypto", {
+        value: realCrypto,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
+
+  it("does not leak partial result before throwing on exhaustion", () => {
+    const realCrypto = (globalThis as any).crypto;
+    Object.defineProperty(globalThis, "crypto", {
+      value: {
+        getRandomValues(arr: Uint32Array) {
+          arr[0] = 0xFFFFFFFF; // always above threshold
           return arr;
         },
       },
