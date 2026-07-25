@@ -75,6 +75,23 @@ describe("username generation", () => {
       expect(() => generateUsernames(10000)).toThrow(RangeError);
     });
 
+    it("returns exactly MAX_USERNAME_COUNT unique well-formed usernames at the upper bound", () => {
+      // Verifies the API contract holds at its declared maximum input.
+      const COUNT = 1024;
+      const result = generateUsernames(COUNT);
+      expect(result).toHaveLength(COUNT);
+
+      const uniqueSet = new Set(result);
+      expect(uniqueSet.size).toBe(COUNT);
+
+      for (const u of result) {
+        expect(u).toMatch(/^[A-Z][a-z]+_[A-Z][a-z]+_[0-9]{4}$/);
+        const [adj, noun] = u.split("_");
+        expect(USERNAME_ADJECTIVES).toContain(adj.toLowerCase());
+        expect(USERNAME_NOUNS).toContain(noun.toLowerCase());
+      }
+    });
+
     it("throws for non-integer counts", () => {
       expect(() => generateUsernames(2.5)).toThrow(RangeError);
     });
