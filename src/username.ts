@@ -48,10 +48,15 @@ export function generateUsernames(count: number, maxAttempts = MAX_USERNAME_COUN
   if (!Number.isInteger(count) || count < 0 || count > MAX_USERNAME_COUNT) {
     throw new RangeError(`Invalid username count: ${count}. Must be between 0 and ${MAX_USERNAME_COUNT}.`);
   }
+  // Zero-count fast path — avoid unnecessary allocation of Set/Array.
+  if (count === 0) return [];
+  // Clamp maxAttempts to a sane ceiling so pathological input can't spawn
+  // a loop that exhausts memory before producing any results.
+  const effectiveMax = Math.min(maxAttempts, MAX_USERNAME_COUNT * 64);
   const seen = new Set<string>();
   const result: string[] = [];
   let attempts = 0;
-  while (result.length < count && attempts < maxAttempts) {
+  while (result.length < count && attempts < effectiveMax) {
     const username = generateUsername();
     if (!seen.has(username)) {
       seen.add(username);
