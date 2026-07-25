@@ -133,6 +133,31 @@ export interface GenerateAllOptions {
 }
 
 /**
+ * Injects missing character classes into a password by replacing random positions
+ * with characters from the required classes, guaranteeing diversity at fallback time.
+ * Tracks "index:classIndex" slots to prevent cross-class overwrite of already-injected positions.
+ */
+function injectMissingClasses(length: number, minClasses: number): string {
+  const chars = Array.from(generatePassword(length));
+  const neededSets = CLASS_SETS.slice(0, minClasses).filter(set => {
+    let hasChar = false;
+    for (const c of chars) if (set.has(c)) { hasChar = true; break; }
+    return !hasChar;
+  });
+  const usedSlots = new Set<string>();
+  for (let i = 0; i < neededSets.length && i < length; i++) {
+    const set = neededSets[i];
+    let replacementIdx: number;
+    do {
+      replacementIdx = getSecureRandomInt(length);
+    } while (usedSlots.has(`${replacementIdx}:${i}`));
+    usedSlots.add(`${replacementIdx}:${i}`);
+    chars[replacementIdx] = [...set][getSecureRandomInt(set.size)];
+  }
+  return chars.join('');
+}
+
+/**
  * Generates a password for each defined length in LENGTHS.
  * Optionally produces multiple copies per slot for copy-paste convenience,
  * and enforces character-class diversity per password.
@@ -152,24 +177,7 @@ export function generateAll(count: number = 1, options?: GenerateAllOptions): st
       if (countDistinctClasses(pw) >= minClasses) return pw;
     }
     // Fallback: guarantee diversity by injecting missing-class characters.
-    const chars = Array.from(generatePassword(length));
-    const neededSets = CLASS_SETS.slice(0, minClasses).filter(set => {
-      let hasChar = false;
-      for (const c of chars) if (set.has(c)) { hasChar = true; break; }
-      return !hasChar;
-    });
-    // Track modified positions to prevent overwriting previously injected characters.
-    const usedPositions = new Set<number>();
-    for (let i = 0; i < neededSets.length && i < length; i++) {
-      const set = neededSets[i];
-      let replacementIdx: number;
-      do {
-        replacementIdx = getSecureRandomInt(length);
-      } while (usedPositions.has(replacementIdx));
-      usedPositions.add(replacementIdx);
-      chars[replacementIdx] = [...set][getSecureRandomInt(set.size)];
-    }
-    return chars.join('');
+    return injectMissingClasses(length, minClasses);
   }
 
   const result: string[] = [];
