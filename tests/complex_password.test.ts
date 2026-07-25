@@ -506,6 +506,64 @@ describe("getSecureRandomInt", () => {
         }
       });
     });
+    describe("rejection sampling during generation", () => {
+      it("must correctly resume sampling after a rejected value mid-password-generation", () => {
+        // Forces the rejection-sampling loop in getSecureRandomInt to execute at least once
+        // while generateComplexPassword is running, then verifies the resulting password still
+        // satisfies all category constraints and contains only allowed characters. This covers
+        // the `while (val >= threshold)` branch that existing deterministic mocks never exercise
+        // because they always supply valid values on first attempt.
+        const realCrypto = globalThis.crypto;
+        // 2 categories × 3 chars each, length=5 → 2 picks + 3 extras from union of size 6.
+        // Total random calls: 2 picks(max=3) + 3 extras(max=6) + 4 shuffle swaps(i=4..1 with max up to 5).
+        // For max=3 or max=6, threshold = UINT32_MODULUS - (UINT32_MODULUS % n).
+        //   n=3: threshold = 0x1_0000_0000 - 1 = 0xFFFFFFFE. Value ≥0xFFFFFFFF → reject; [0,1,2] accept.
+        //   n=6: threshold = 0x1_0000_0000 - (UINT32_MODULUS % 6). UINT32_MODULUS%6=2, so threshold=0xFFFFFFFE. Same rejection band.
+        // Call sequence from generateComplexPassword: pick0(max=3), pick1(max=3), extra0-2(max=6), shuffle_i4(j=rand5), i3(j=rand4), i2(j=rand3), i1(j=rand2).
+        // Forced rejection at call #1 (pick cat0) — 0xFFFFFFFF rejected, next sample resumes loop.
+        const samples = [
+          0xFFFFFFFF, // rejected: pick from cat0 retries
+          0,          // accepted: index 0%3=0 → 'A'
+          2,          // accepted: index 2%3=2 → 'F' (pick from cat1)
+          5,          // extra[0] from union {A,B,C,D,E,F}: index 5%6=5 → 'F'
+          1,          // extra[1]: index 1%6=1 → 'B'
+          3,          // extra[2]: index 3%6=3 → 'D'
+          0,          // shuffle i=4 j=rand(5): swap [4]↔[0]
+          2,          // shuffle i=3 j=rand(4): swap [3]↔[2]
+          0xFFFFFFFF, // rejected: shuffle i=2 j=rand(3) retries
+          0,          // accepted: index 0%3=0 → swap [2]↔[0]
+          0,          // shuffle i=1 j=rand(2): swap [1]↔[0]
+        ];
+        let sampleIndex = 0;
+        Object.defineProperty(globalThis, "crypto", {
+          configurable: true,
+          writable: true,
+          value: {
+            getRandomValues(array: Uint32Array) {
+              array[0] = samples[sampleIndex++];
+              return array;
+            },
+          },
+        });
+        try {
+          const pw = generateComplexPassword(5, [['A', 'B', 'C'], ['D', 'E', 'F']]);
+          expect(pw.length).toBe(5);
+          // Category constraints must still hold after rejections.
+          expect([...pw].some(c => ['A', 'B', 'C'].includes(c))).toBe(true);
+          expect([...pw].some(c => ['D', 'E', 'F'].includes(c))).toBe(true);
+          // All chars must come from the union only.
+          const allowed = new Set(['A', 'B', 'C', 'D', 'E', 'F']);
+          for (const c of pw) expect(allowed.has(c)).toBe(true);
+        } finally {
+          Object.defineProperty(globalThis, "crypto", {
+            configurable: true,
+            writable: true,
+            value: realCrypto,
+          });
+        }
+      });
+    });
+
   });
 
 });
