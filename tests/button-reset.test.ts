@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { scheduleButtonReset, cancelButtonReset, isResetScheduled, resetTimeouts, DEFAULT_RESET_DELAY_MS } from "../src/button-reset";
+import { scheduleButtonReset, cancelButtonReset, isResetScheduled, resetDescriptions, resetTimeouts, getResetDescription, DEFAULT_RESET_DELAY_MS } from "../src/button-reset";
 
 describe("DEFAULT_RESET_DELAY_MS", () => {
   it ("is exported and equals 300 ms", () => {
