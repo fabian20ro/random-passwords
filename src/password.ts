@@ -130,6 +130,8 @@ export interface GenerateAllOptions {
   minClassesPerPassword?: number;
   /** Maximum retry attempts when a generated password fails the class-diversity check. Default: 20. */
   maxRetries?: number;
+  /** When true, use characters excluding visually ambiguous ones (0/O/l/I/1). Defaults to false. */
+  ambiguityFree?: boolean;
 }
 
 /**
@@ -172,8 +174,9 @@ export function generateAll(count: number = 1, options?: GenerateAllOptions): st
   const maxRetries = options?.maxRetries ?? MAX_DIVERSITY_RETRIES;
 
   function generateDiverse(length: number): string {
+    const generator = options?.ambiguityFree ? generatePasswordAmbiguityFree : generatePassword;
     for (let attempt = 0; attempt < maxRetries; attempt++) {
-      const pw = generatePassword(length);
+      const pw = generator(length);
       if (countDistinctClasses(pw) >= minClasses) return pw;
     }
     // Fallback: guarantee diversity by injecting missing-class characters.
