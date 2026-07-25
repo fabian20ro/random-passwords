@@ -34,25 +34,29 @@ export function getSecureRandomInt(max: number, min: number = 0): number {
 
   let buf: Uint32Array<ArrayBuffer>;
   try {
-    buf = new Uint32Array(1) as Uint32Array<ArrayBuffer>;
-  } catch {
+    // Single error boundary for all crypto operations: allocation + sampling.
+    const getRandomValues = crypto.bind(globalThis.crypto!);
+    let attempts = 0;
+    do {
+      try {
+        buf = new Uint32Array(1) as Uint32Array<ArrayBuffer>;
+        getRandomValues(buf);
+      } catch {
+        throw new Error("Crypto API unavailable — cannot generate secure random values");
+      }
+    } while (++attempts < MAX_ATTEMPTS && buf[0] >= threshold);
+
+    if (buf[0] >= threshold) {
+      throw new Error("Rejection sampling exhausted after " + MAX_ATTEMPTS + " attempts");
+    }
+
+    return min + (buf[0] % range);
+  } catch (e) {
+    // Re-throw our own error messages; other errors propagate.
+    if ((e as Error).message.includes("Crypto API unavailable") ||
+        (e as Error).message.includes("Rejection sampling exhausted")) {
+      throw e;
+    }
     throw new Error("Crypto API unavailable — cannot generate secure random values");
   }
-
-  const getRandomValues = crypto!.bind(globalThis.crypto!);
-
-  let attempts = 0;
-  do {
-    try {
-      getRandomValues(buf);
-    } catch {
-      throw new Error("Crypto API unavailable — cannot generate secure random values");
-    }
-  } while (++attempts < MAX_ATTEMPTS && buf[0] >= threshold);
-
-  if (buf[0] >= threshold) {
-    throw new Error("Rejection sampling exhausted after " + MAX_ATTEMPTS + " attempts");
-  }
-
-  return min + (buf[0] % range);
 }

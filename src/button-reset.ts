@@ -1,9 +1,12 @@
 const resetTimeouts = new WeakMap<object, ReturnType<typeof setTimeout>>();
 
+/** Parallel WeakMap storing optional semantic labels attached to scheduled resets. */
+const resetDescriptions = new WeakMap<object, string>();
+
 /** Default delay (ms) used when callers omit an explicit `delayMs`. */
 export const DEFAULT_RESET_DELAY_MS = 300;
 
-export { resetTimeouts };
+export { resetTimeouts, resetDescriptions };
 
 /** Cancel any pending reset for the given target. Returns true if a scheduled
  *  timeout was actually cleared, false if nothing was pending (no-op). No-op
@@ -14,6 +17,7 @@ export function cancelButtonReset(target: object): boolean {
   if (timeoutId !== undefined) {
     clearTimeout(timeoutId);
     resetTimeouts.delete(target);
+    resetDescriptions.delete(target);
     return true;
   }
   return false;
@@ -24,18 +28,33 @@ export function isResetScheduled(target: object): boolean {
   return target instanceof Object && resetTimeouts.has(target);
 }
 
+/** Retrieve the semantic description attached to a scheduled reset, or undefined if none was set.
+ *  Safe to call on any target — returns undefined for non-objects, unscheduled targets, and
+ *  targets whose description was never set. */
+export function getResetDescription(target: object): string | undefined {
+  return (target instanceof Object && resetDescriptions.has(target)) ? resetDescriptions.get(target) : undefined;
+}
+
 /** Schedule a delayed reset callback for the given target.
  *  Cancels any prior pending reset first (idempotent).
  *  The `reset` closure fires exactly once at or after `delayMs`.
  *  Rescheduling before expiry replaces the pending callback with the new one;
  *  stale closures from earlier schedules are suppressed via timeout-id identity.
+ *  An optional `description` string is attached to the target and can be retrieved later
+ *  with {@link getResetDescription}. It survives cancellation and fires alongside the reset.
  *  Throws if `target` is not an object (null, primitive, undefined). */
 export function scheduleButtonReset(
   target: object,
   delayMs = DEFAULT_RESET_DELAY_MS,
   reset: () => void,
+  description?: string,
 ): void {
   cancelButtonReset(target);
+
+  // Attach the semantic description alongside the timeout identity so callers
+  // can introspect what is pending at any time. Replacing a prior schedule also
+  // replaces its description; cancelling clears it entirely.
+  if (description !== undefined) resetDescriptions.set(target, description);
 
   // Reject a missing or non-callable reset callback — a stale schedule with no
   // handler would fire and silently throw on `reset()`, crashing the page.
