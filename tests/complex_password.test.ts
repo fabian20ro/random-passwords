@@ -452,6 +452,59 @@ describe("getSecureRandomInt", () => {
         const invalidCats = [['A', 'B'], ['']];
         expect(generateComplexPassword(10, invalidCats)).toBe("");
       });
+
+      it("must trace full code path (category picks → extras → shuffle) with deterministic mock", () => {
+        // Exercises every stage of generateComplexPassword:
+        // step 1: pick one char per category from its pool,
+        // step 2: fill remaining positions uniformly from deduplicated union,
+        // step 3: Fisher-Yates shuffle.
+        // With 2 categories (each length 3) and length=5 → 2 picks + 3 extras = 5 total.
+        // Shuffle runs for i=4 down to i=1 (4 swap calls). Total random calls: 2 + 3 + 4 = 9.
+        const realCrypto = globalThis.crypto;
+        // Step 1 (pick): cat0 picks index 0 → 'A', cat1 picks index 2 → 'C'
+        // Step 2 (extras, from union {A,B,C,1,2,3}): indices 1,0,2 → 'B','A','C'
+        // Step 3 (shuffle): swaps at i=4→j rand(5)=3, i=3→j rand(4)=1, i=2→j rand(3)=2(no swap), i=1→j rand(2)=0
+        const samples = [
+          0, // step1: cat0 picks index 0 → 'A'
+          2, // step1: cat1 picks index 2 → 'C' (from ['1','2','3'])
+          1, // step2: extra[0] index 1 → 'B' (from union {A,B,C,1,2,3})
+          0, // step2: extra[1] index 0 → 'A'
+          2, // step2: extra[2] index 2 → 'C'
+          3, // step3: shuffle i=4 j=rand(5)=3
+          1, // step3: shuffle i=3 j=rand(4)=1
+          2, // step3: shuffle i=2 j=rand(3)=2 (no-op swap)
+          0, // step3: shuffle i=1 j=rand(2)=0
+        ];
+        let sampleIndex = 0;
+        Object.defineProperty(globalThis, "crypto", {
+          configurable: true,
+          writable: true,
+          value: {
+            getRandomValues(array: Uint32Array) {
+              array[0] = samples[sampleIndex++];
+              return array;
+            },
+          },
+        });
+        try {
+          const pw = generateComplexPassword(5, [['A', 'B', 'C'], ['1', '2', '3']]);
+          expect(pw.length).toBe(5);
+          // Verify category constraints: at least one char from each category present.
+          expect([...pw].some(c => ['A', 'B', 'C'].includes(c))).toBe(true);
+          expect([...pw].some(c => ['1', '2', '3'].includes(c))).toBe(true);
+          // All chars must come from the union of categories (no external chars injected).
+          const allowed = new Set(['A', 'B', 'C', '1', '2', '3']);
+          for (const c of pw) expect(allowed.has(c)).toBe(true);
+          // Verify sample stream consumed exactly.
+          expect(sampleIndex).toBe(samples.length);
+        } finally {
+          Object.defineProperty(globalThis, "crypto", {
+            configurable: true,
+            writable: true,
+            value: realCrypto,
+          });
+        }
+      });
     });
   });
 
