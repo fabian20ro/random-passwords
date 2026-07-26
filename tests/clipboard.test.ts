@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { vi } from "vitest";
-import { canCopyToClipboard, copyTextToClipboard, probeClipboard } from "../src/clipboard";
+import { canCopyToClipboard, copyTextToClipboard, MAX_CLIPBOARD_TEXT_BYTES, probeClipboard } from "../src/clipboard";
 
 type FallbackStubOptions = {
   createElement?: (tag: string) => unknown;
@@ -847,5 +847,83 @@ describe("probeClipboard", () => {
     const result = await probeClipboard();
 
     expect(result).toBe(false);
+  });
+});
+
+describe("copyTextToClipboard blob size limit", () => {
+  it("returns false for text exceeding MAX_CLIPBOARD_TEXT_BYTES without invoking writeText or creating DOM elements", async () => {
+    // Oversized payloads must be rejected at the Blob.size gate — before any API call or DOM mutation.
+    const writeTextSpy = vi.fn(async () => {});
+    let createElementCallCount = 0;
+
+    vi.stubGlobal("navigator", { clipboard: {} });
+    vi.stubGlobal("document", {
+      createElement: (_tag: string) => {
+        createElementCallCount++;
+        return null as any; // never returned — should not be reached
+      },
+      body: {},
+    } as any);
+
+    const oversizedText = "a".repeat(MAX_CLIPBOARD_TEXT_BYTES + 1024);
+
+    await expect(copyTextToClipboard(undefined, oversizedText)).resolves.toBe(false);
+
+    expect(writeTextSpy).not.toHaveBeenCalled();
+    expect(createElementCallCount).toBe(0);
+  });
+
+  it("returns false when Blob.size exceeds MAX_CLIPBOARD_TEXT_BYTES (verified via spy on writeText)", async () => {
+    // Confirm the rejection path never reaches the Clipboard API — even when navigator.clipboard is available.
+    const writeTextSpy = vi.fn(async () => {});
+    vi.stubGlobal("navigator", {
+      clipboard: { writeText: writeTextSpy },
+    });
+
+    const oversizedText = "a".repeat(MAX_CLIPBOARD_TEXT_BYTES + 1);
+
+    await expect(copyTextToClipboard(undefined, oversizedText)).resolves.toBe(false);
+
+    expect(writeTextSpy).not.toHaveBeenCalled();
+  });
+
+  it("returns true for text exactly at MAX_CLIPBOARD_TEXT_BYTES (boundary)", async () => {
+    // The limit is strict `>` — boundary value must pass through to writeText.
+    const mockTextarea = {
+      value: "",
+      setAttribute: vi.fn(),
+      style: { position: "", left: "" },
+      select: vi.fn(),
+      setSelectionRange: vi.fn((_start: number, _end: number) => {}),
+    };
+
+    vi.stubGlobal("navigator", { clipboard: {} });
+    vi.stubGlobal("document", createFallbackStub({
+      createElement: () => mockTextarea as unknown as HTMLTextAreaElement,
+    }));
+
+    const atLimitText = "a".repeat(MAX_CLIPBOARD_TEXT_BYTES);
+
+    await expect(copyTextToClipboard(undefined, atLimitText)).resolves.toBe(true);
+  });
+
+  it("returns false when Blob.size exceeds MAX_CLIPBOARD_TEXT_BYTES and execCommand fallback is also unavailable", async () => {
+    // Double-rejection path: blob gate fires first, so writeText never runs.
+    let createElementCallCount = 0;
+    vi.stubGlobal("navigator", {});
+
+    vi.stubGlobal("document", {
+      createElement: (_tag: string) => {
+        createElementCallCount++;
+        return null as any;
+      },
+      body: null,
+    } as any);
+
+    const oversizedText = "a".repeat(MAX_CLIPBOARD_TEXT_BYTES + 2048);
+
+    await expect(copyTextToClipboard(undefined, oversizedText)).resolves.toBe(false);
+
+    expect(createElementCallCount).toBe(0);
   });
 });

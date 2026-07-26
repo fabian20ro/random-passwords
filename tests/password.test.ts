@@ -118,6 +118,37 @@ describe("generatePassword", () => {
       expect(hasUpper && hasLower && hasDigit).toBe(true);
     }
   });
+
+  it("generates ambiguity-free passwords when ambiguityFree option is true", () => {
+    const passwords = generateAll(5, { ambiguityFree: true });
+    for (const pw of passwords) {
+      expect(pw.length).toBeGreaterThan(0);
+      // Verify no ambiguous chars: 0, O, l, I, 1
+      expect([...pw].every(c => !["0", "O", "l", "I", "1"].includes(c))).toBe(true);
+    }
+  });
+
+  it("ambiguityFree option respects minClassesPerPassword constraint", () => {
+    const passwords = generateAll(1, { ambiguityFree: true, minClassesPerPassword: 3 });
+    for (const pw of passwords) {
+      const hasUpper = /[A-Z]/.test(pw);
+      const hasLower = /[a-z]/.test(pw);
+      const hasDigit = /[0-9]/.test(pw);
+      expect(hasUpper && hasLower && hasDigit).toBe(true);
+      // Still no ambiguous chars
+      expect([...pw].every(c => !["0", "O", "l", "I", "1"].includes(c))).toBe(true);
+    }
+  });
+
+  it("default behavior (ambiguityFree=false) may include ambiguous characters", () => {
+    // With default options, ambiguous chars are allowed — verify generation works normally
+    const passwords = generateAll(50);
+    expect(passwords.length).toBeGreaterThan(LENGTHS.length * 49);
+    for (const pw of passwords) {
+      expect(pw.length).toBeGreaterThan(0);
+    }
+  });
+
   it("returns a string of the requested length and contains characters from all categories", () => {
     const categories = [["abc"], ["123"], ["!@#"]];
     const length = 10;
