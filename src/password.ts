@@ -114,14 +114,17 @@ const MAX_DIVERSITY_RETRIES = 20;
 /** Precomputed class Sets — allocated once at module load, reused per call. */
 const CLASS_SETS = [new Set(CHAR_CLASS_UPPER), new Set(CHAR_CLASS_LOWER), new Set(CHAR_CLASS_DIGIT)];
 
+function setHasChar(set: Set<string>, pw: string): boolean {
+  for (let i = 0; i < pw.length; i++) if (set.has(pw[i])) return true;
+  return false;
+}
+
 function countDistinctClasses(pw: string): number {
-  const seen = [false, false, false];
-  for (let i = 0; i < pw.length; i++) {
-    if (!seen[0] && CLASS_SETS[0].has(pw[i])) seen[0] = true;
-    else if (!seen[1] && CLASS_SETS[1].has(pw[i])) seen[1] = true;
-    else if (!seen[2] && CLASS_SETS[2].has(pw[i])) seen[2] = true;
+  let n = 0;
+  for (let i = 0; i < CLASS_SETS.length; i++) {
+    if (setHasChar(CLASS_SETS[i], pw)) n++;
   }
-  return (seen[0] ? 1 : 0) + (seen[1] ? 1 : 0) + (seen[2] ? 1 : 0);
+  return n;
 }
 
 /** Options for `generateAll`. */
@@ -141,11 +144,7 @@ export interface GenerateAllOptions {
  */
 function injectMissingClasses(length: number, minClasses: number): string {
   const chars = Array.from(generatePassword(length));
-  const neededSets = CLASS_SETS.slice(0, minClasses).filter(set => {
-    let hasChar = false;
-    for (const c of chars) if (set.has(c)) { hasChar = true; break; }
-    return !hasChar;
-  });
+  const neededSets = CLASS_SETS.slice(0, minClasses).filter(set => !setHasChar(set, chars.join('')));
   const usedSlots = new Set<string>();
   for (let i = 0; i < neededSets.length && i < length; i++) {
     const set = neededSets[i];
