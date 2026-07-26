@@ -51,16 +51,18 @@ export function scheduleButtonReset(
 ): void {
   cancelButtonReset(target);
 
-  // Attach the semantic description alongside the timeout identity so callers
-  // can introspect what is pending at any time. Replacing a prior schedule also
-  // replaces its description; cancelling clears it entirely.
-  if (description !== undefined) resetDescriptions.set(target, description);
-
   // Reject a missing or non-callable reset callback — a stale schedule with no
   // handler would fire and silently throw on `reset()`, crashing the page.
   if (typeof reset !== "function") {
     return;
   }
+
+  // Attach the semantic description alongside the timeout identity so callers
+  // can introspect what is pending at any time. Replacing a prior schedule also
+  // replaces its description; cancelling clears it entirely. Set after all
+  // validations pass — failed schedules must not leak orphaned descriptions into
+  // the WeakMap, which would otherwise confuse callers of getResetDescription().
+  if (description !== undefined) resetDescriptions.set(target, description);
 
   // Coerce null/undefined to the documented default; NaN → clamp to 0.
   // Reject ±Infinity on raw input BEFORE Math.max(0, x) masks -Infinity as 0.
