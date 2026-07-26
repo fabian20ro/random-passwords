@@ -148,6 +148,19 @@ describe("username generation", () => {
       }
     });
 
+    it("throws when maxAttempts is zero — exhaustion guard fires immediately", () => {
+      // The while-loop condition (attempts < effectiveMax) short-circuits when
+      // effectiveMax ≤ 0, so no username is generated and the exhaustion guard
+      // throws. Verifies this is an observable Error, not a silent empty array.
+      expect(() => generateUsernames(5, 0)).toThrow(Error);
+    });
+
+    it("throws when maxAttempts is negative — clamped effectiveMax cannot enter loop", () => {
+      // Math.min(-100, ceiling) → -100; the loop guard (attempts < -100) is
+      // immediately false. The exhaustion Error must still fire.
+      expect(() => generateUsernames(5, -100)).toThrow(Error);
+    });
+
     it("never returns malformed usernames under repeated generation", () => {
       // Regression test: ensures capitalize + join contract survives
       // high-volume generation without format drift.

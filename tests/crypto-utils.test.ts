@@ -323,4 +323,102 @@ describe("getSecureRandomInt", () => {
       });
     }
   });
+
+  it("retries until a valid sample, then returns min + (buf[0] % range)", () => {
+    // max=7: UINT32_MODULUS%7 = 4, threshold = UINT32_MODULUS - 4.
+    // Top 4 uint32 values are rejected; anything below is accepted.
+    const realCrypto = (globalThis as any).crypto;
+    let callCount = 0;
+    Object.defineProperty(globalThis, "crypto", {
+      value: {
+        getRandomValues(arr: Uint32Array) {
+          callCount++;
+          if (callCount <= 3) {
+            arr[0] = 0xFFFFFFFF; // rejected — above threshold
+          } else {
+            arr[0] = 0x8000_0000; // accepted — well below threshold
+          }
+          return arr;
+        },
+      },
+      configurable: true,
+      writable: true,
+    });
+    try {
+      const result = getSecureRandomInt(7);
+      expect(result).toBeGreaterThanOrEqual(0);
+      expect(result).toBeLessThan(7);
+      // 0x8000_0000 % 7 === 2 (2147483648 = 7*306783378 + 2)
+      expect(result).toBe(2);
+      expect(callCount).toBe(4); // 3 rejections then one accepted sample
+    } finally {
+      Object.defineProperty(globalThis, "crypto", {
+        value: realCrypto,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
+
+  it("honours min offset when retry sampling produces below-threshold values", () => {
+    const max = 50;
+    const min = 10;
+    const realCrypto = (globalThis as any).crypto;
+    let callCount = 0;
+    Object.defineProperty(globalThis, "crypto", {
+      value: {
+        getRandomValues(arr: Uint32Array) {
+          callCount++;
+          if (callCount <= 5) {
+            arr[0] = 0xFFFFFFFF; // rejected — above threshold for range=40
+          } else {
+            arr[0] = 0x10; // accepted — well below threshold
+          }
+          return arr;
+        },
+      },
+      configurable: true,
+      writable: true,
+    });
+    try {
+      const result = getSecureRandomInt(max, min);
+      expect(result).toBeGreaterThanOrEqual(min);
+      expect(result).toBeLessThan(max + min);
+      // 0x10 % 40 === 16; offset by min=10 → 26
+      expect(result).toBe(26);
+      expect(callCount).toBe(6);
+    } finally {
+      Object.defineProperty(globalThis, "crypto", {
+        value: realCrypto,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
+
+  it("does not call getRandomValues a fourth time if the first sample is valid", () => {
+    const realCrypto = (globalThis as any).crypto;
+    let callCount = 0;
+    Object.defineProperty(globalThis, "crypto", {
+      value: {
+        getRandomValues(arr: Uint32Array) {
+          callCount++;
+          arr[0] = 42; // well below any threshold — always accepted
+          return arr;
+        },
+      },
+      configurable: true,
+      writable: true,
+    });
+    try {
+      getSecureRandomInt(7);
+      expect(callCount).toBe(1); // single call succeeds on the first sample
+    } finally {
+      Object.defineProperty(globalThis, "crypto", {
+        value: realCrypto,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
 });
