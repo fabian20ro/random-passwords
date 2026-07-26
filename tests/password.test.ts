@@ -551,6 +551,8 @@ describe("generateComplexPassword", () => {
 });
 
 describe("generatePasswordAmbiguityFree", () => {
+  const NON_AMBIGUOUS_CHARSET = [...CHARS].filter(c => !["0", "O", "l", "I", "1"].includes(c)).join("");
+
   it("returns a password of correct length without ambiguous characters", () => {
     const length = 20;
     for (let i = 0; i < 50; i++) {
@@ -558,6 +560,14 @@ describe("generatePasswordAmbiguityFree", () => {
       expect(pw).toHaveLength(length);
       // Verify no ambiguous chars: 0, O, l, I, 1
       expect([...pw].every(c => !["0", "O", "l", "I", "1"].includes(c))).toBe(true);
+    }
+  });
+
+  it("only contains characters from the non-ambiguous alphanumeric set", () => {
+    for (let i = 0; i < 200; i++) {
+      const pw = generatePasswordAmbiguityFree(32);
+      expect(pw).toHaveLength(32);
+      expect([...pw].every(c => NON_AMBIGUOUS_CHARSET.includes(c))).toBe(true);
     }
   });
 
