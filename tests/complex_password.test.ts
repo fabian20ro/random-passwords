@@ -564,6 +564,66 @@ describe("getSecureRandomInt", () => {
       });
     });
 
+    describe("malformed category inputs", () => {
+      it("must return empty string when a category sub-array is null", () => {
+        const categories = [['A', 'B'], [null] as unknown as string[]];
+        expect(generateComplexPassword(4, categories)).toBe("");
+      });
+
+      it("must return empty string when a category sub-array is undefined", () => {
+        const categories = [['A', 'B'], [undefined] as unknown as string[]];
+        expect(generateComplexPassword(4, categories)).toBe("");
+      });
+
+      it("must return empty string for non-string elements in category arrays via join coercion", () => {
+        // Numbers coerce to strings: [1, 2].join('') === '12' — must still produce valid output.
+        const categories = [['A', 'B'], [1, 2] as unknown as string[]];
+        for (let i = 0; i < 30; i++) {
+          const pw = generateComplexPassword(4, categories);
+          expect(pw.length).toBe(4);
+          // Cat0 contributes A/B; cat1 contributes '1'/'2'.
+          expect([...pw].some(c => 'AB'.includes(c))).toBe(true);
+        }
+      });
+
+      it("must throw when length exceeds MAX_LENGTH (65536)", () => {
+        const categories = [['A', 'B'], ['1', '2']];
+        // Verify the error message includes the actual limit value.
+        expect(() => generateComplexPassword(70000, categories)).toThrow(/Length exceeds maximum allowed: 65536/);
+      });
+
+      it("must handle a single valid category with minimum length", () => {
+        const categories = [['A', 'B', 'C']];
+        for (let i = 0; i < 20; i++) {
+          const pw = generateComplexPassword(1, categories);
+          expect(pw.length).toBe(1);
+          expect(['A', 'B', 'C']).toContain(pw[0]);
+        }
+      });
+
+      it("must handle length exactly one below categories.length (guard boundary)", () => {
+        // Guard: length < categories.length → return "". Length === categories.length → proceed.
+        const categories = [['A'], ['1'], ['!']]; // 3 categories
+        expect(generateComplexPassword(2, categories)).toBe("");
+      });
+
+      it("must coerce mixed null/undefined/string elements in a category via join", () => {
+        // [null, 'X', undefined].join('') === "nullX" — must not crash.
+        const categories = [['A', 'B'], [null, '1', undefined] as unknown as string[]];
+        for (let i = 0; i < 30; i++) {
+          const pw = generateComplexPassword(4, categories);
+          expect(pw.length).toBe(4);
+          // Cat0: A/B. Cat1: 'nullX1' after join — includes n,u,l,X,1.
+          expect([...pw].some(c => 'AB'.includes(c))).toBe(true);
+        }
+      });
+
+      it("must return empty string when all categories are empty arrays", () => {
+        const categories = [[], []];
+        expect(generateComplexPassword(4, categories)).toBe("");
+      });
+    });
+
   });
 
 });
