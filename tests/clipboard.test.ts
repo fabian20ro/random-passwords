@@ -198,6 +198,19 @@ describe("copyTextToClipboard", () => {
     expect(writes).toEqual([]);
   });
 
+  it("returns false when text contains only non-breaking spaces (Unicode whitespace)", async () => {
+    const writes: string[] = [];
+    const clipboard = {
+      async writeText(text: string): Promise<void> {
+        writes.push(text);
+      },
+    } satisfies Pick<Clipboard, "writeText">;
+
+    // \u00A0 is non-breaking space — trim() treats it as whitespace per ECMAScript spec.
+    await expect(copyTextToClipboard(clipboard, "\u00A0")).resolves.toBe(false);
+    expect(writes).toEqual([]);
+  });
+
   it("returns true when writeText is a synchronous function", async () => {
     let called = false;
     const clipboard = {
