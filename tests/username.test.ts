@@ -100,6 +100,16 @@ describe("username generation", () => {
       expect(() => generateUsernames(NaN)).toThrow(RangeError);
     });
 
+    it("throws for null, undefined, and non-numeric coercion inputs", () => {
+      // Number.isInteger is the gate — falsy/non-number values must not slip
+      // past validation into the loop or RNG calls.
+      expect(() => generateUsernames(null as never)).toThrow(RangeError);
+      expect(() => generateUsernames(undefined as never)).toThrow(RangeError);
+      expect(() => generateUsernames("5" as never)).toThrow(RangeError);
+      expect(() => generateUsernames(true as never)).toThrow(RangeError);
+      expect(() => generateUsernames(false as never)).toThrow(RangeError);
+    });
+
     it("returns an array of length 1 when count is 1", () => {
       const usernames = generateUsernames(1);
       expect(usernames).toHaveLength(1);
