@@ -64,5 +64,9 @@ export function generateUsernames(count: number, maxAttempts = MAX_USERNAME_COUN
     }
     attempts++;
   }
+  // Observable failure: exhaustion with zero results is a real bug, not an empty array.
+  if (result.length === 0) {
+    throw new Error(`Exhausted ${effectiveMax} attempts without generating any unique username.`);
+  }
   return result;
 }
