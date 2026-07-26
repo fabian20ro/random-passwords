@@ -203,21 +203,21 @@ describe("getSecureRandomInt", () => {
     }
   });
 
-  it("throws when getRandomValues throws at runtime (try/catch guards against call-time failures)", () => {
+  it("throws the actual runtime error when getRandomValues throws (no wrapping)", () => {
     const realCrypto = (globalThis as any).crypto;
     Object.defineProperty(globalThis, "crypto", { value: { getRandomValues: () => { throw new Error("simulated crypto error"); } }, configurable: true, writable: true });
     try {
-      expect(() => getSecureRandomInt(10)).toThrow("Crypto API unavailable");
+      expect(() => getSecureRandomInt(10)).toThrow("simulated crypto error");
     } finally {
       Object.defineProperty(globalThis, "crypto", { value: realCrypto, configurable: true, writable: true });
     }
   });
 
-  it("throws when getRandomValues throws TypeError at runtime (non-standard rejection)", () => {
+  it("throws the actual TypeError when getRandomValues throws at runtime", () => {
     const realCrypto = (globalThis as any).crypto;
     Object.defineProperty(globalThis, "crypto", { value: { getRandomValues: () => { throw new TypeError("bad buffer"); } }, configurable: true, writable: true });
     try {
-      expect(() => getSecureRandomInt(10)).toThrow("Crypto API unavailable");
+      expect(() => getSecureRandomInt(10)).toThrow("bad buffer");
     } finally {
       Object.defineProperty(globalThis, "crypto", { value: realCrypto, configurable: true, writable: true });
     }
