@@ -36,7 +36,7 @@ export function getSecureRandomInt(max: number, min: number = 0): number {
   const getRandomValues = crypto.bind(globalThis.crypto!);
   let attempts = 0;
   do {
-    buf = new Uint32Array(1) as Uint32Array<ArrayBuffer>;
+    buf = new Uint32Array(1);
     getRandomValues(buf);
   } while (++attempts < MAX_ATTEMPTS && buf[0] >= threshold);
 
