@@ -54,6 +54,12 @@ describe("generatePassword", () => {
     expect(generatePassword(2.5)).toBe("");
   });
 
+  it("defaults to length 24 when called with no arguments", () => {
+    const pw = generatePassword();
+    expect(pw).toHaveLength(24);
+    expect(pw).toMatch(/^[A-Za-z0-9]+$/);
+  });
+
   it("returns an empty string for non-positive integer lengths", () => {
     expect(generatePassword(0)).toBe("");
     expect(generatePassword(-1)).toBe("");
