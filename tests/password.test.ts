@@ -453,6 +453,20 @@ describe("generateComplexPassword", () => {
     expect(pw).toBe("");
   });
 
+  it("returns an empty string when length is zero with valid categories", () => {
+    // Guard clause: `length < categories.length` (0 < n) must return "" without throwing.
+    const categories = [["abc"], ["123"]];
+    const pw = generateComplexPassword(0, categories);
+    expect(pw).toBe("");
+  });
+
+  it("returns an empty string when length is negative with valid categories", () => {
+    // Guard clause: `length < categories.length` (-5 < n) must return "" without throwing.
+    const categories = [["abc"], ["123"]];
+    const pw = generateComplexPassword(-5, categories);
+    expect(pw).toBe("");
+  });
+
   it("verifies complex passwords for character set compliance", () => {
     const categories = [["abc"], ["123"], ["!@#"]];
     const length = 20;

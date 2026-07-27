@@ -29,10 +29,12 @@ function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-export function generateUsername(): string {
-  const adjective = USERNAME_ADJECTIVES[getSecureRandomInt(USERNAME_ADJECTIVES.length)];
-  const noun = USERNAME_NOUNS[getSecureRandomInt(USERNAME_NOUNS.length)];
-  return `${capitalize(adjective)}_${capitalize(noun)}_${randomFourDigitNumber()}`;
+export function generateUsername(includeNumber: boolean = true): string {
+  const parts = [capitalize(USERNAME_ADJECTIVES[getSecureRandomInt(USERNAME_ADJECTIVES.length)]), capitalize(USERNAME_NOUNS[getSecureRandomInt(USERNAME_NOUNS.length)])];
+  if (includeNumber) {
+    parts.push(randomFourDigitNumber().toString());
+  }
+  return parts.join("_");
 }
 
 export { capitalize };
@@ -47,6 +49,9 @@ const MAX_USERNAME_COUNT = 1024;
 export function generateUsernames(count: number, maxAttempts = MAX_USERNAME_COUNT * 16): string[] {
   if (!Number.isInteger(count) || count < 0 || count > MAX_USERNAME_COUNT) {
     throw new RangeError(`Invalid username count: ${count}. Must be between 0 and ${MAX_USERNAME_COUNT}.`);
+  }
+  if (!Number.isInteger(maxAttempts) || maxAttempts <= 0) {
+    throw new RangeError(`Invalid maxAttempts: ${maxAttempts}. Must be a positive integer.`);
   }
   // Zero-count fast path — avoid unnecessary allocation of Set/Array.
   if (count === 0) return [];
