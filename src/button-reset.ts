@@ -3,6 +3,9 @@ const resetTimeouts = new WeakMap<object, ReturnType<typeof setTimeout>>();
 /** Parallel WeakMap storing optional semantic labels attached to scheduled resets. */
 const resetDescriptions = new WeakMap<object, string>();
 
+/** Parallel WeakMap storing optional cancel hooks attached to scheduled resets — fired when a pending reset is cancelled (rescheduled or explicitly cleared). */
+const resetCancelHooks = new WeakMap<object, () => void>();
+
 /** Default delay (ms) used when callers omit an explicit `delayMs`. */
 export const DEFAULT_RESET_DELAY_MS = 300;
 
@@ -17,6 +20,13 @@ export function cancelButtonReset(target: object): boolean {
   if (timeoutId !== undefined) {
     clearTimeout(timeoutId);
     resetTimeouts.delete(target);
+    // Fire the cancel hook before clearing it — caller may still reference
+    // the description after cancellation, so delete in a defined order.
+    const hook = resetCancelHooks.get(target);
+    if (typeof hook === "function") {
+      try { hook(); } catch { /* hook errors must not abort cancellation */ }
+      resetCancelHooks.delete(target);
+    }
     resetDescriptions.delete(target);
     return true;
   }
@@ -42,14 +52,23 @@ export function getResetDescription(target: object): string | undefined {
  *  stale closures from earlier schedules are suppressed via timeout-id identity.
  *  An optional `description` string is attached to the target and can be retrieved later
  *  with {@link getResetDescription}. It survives cancellation and fires alongside the reset.
+ *  An optional `onCancel` callback fires when the pending schedule is cancelled (rescheduled or explicitly cleared).
  *  Throws if `target` is not an object (null, primitive, undefined). */
 export function scheduleButtonReset(
   target: object,
   delayMs = DEFAULT_RESET_DELAY_MS,
   reset: () => void,
   description?: string,
+  onCancel?: () => void,
 ): void {
   cancelButtonReset(target);
+
+  // If this schedule has a cancel hook, attach it — it fires when the pending
+  // timeout is cancelled (rescheduled or explicitly cleared). Stored after the
+  // clear so it does not fire on its own cancellation.
+  if (typeof onCancel === "function") {
+    resetCancelHooks.set(target, onCancel);
+  }
 
   // Reject a missing or non-callable reset callback — a stale schedule with no
   // handler would fire and silently throw on `reset()`, crashing the page.
@@ -81,6 +100,9 @@ export function scheduleButtonReset(
   const timeoutId = setTimeout(() => {
     if (resetTimeouts.get(target) === timeoutId) {
       resetTimeouts.delete(target);
+      // Clean up parallel WeakMaps so stale entries don't leak.
+      resetCancelHooks.delete(target);
+      resetDescriptions.delete(target);
       reset();
     }
   }, effectiveDelay);
