@@ -48,6 +48,9 @@ export function generateUsernames(count: number, maxAttempts = MAX_USERNAME_COUN
   if (!Number.isInteger(count) || count < 0 || count > MAX_USERNAME_COUNT) {
     throw new RangeError(`Invalid username count: ${count}. Must be between 0 and ${MAX_USERNAME_COUNT}.`);
   }
+  if (!Number.isInteger(maxAttempts) || maxAttempts <= 0) {
+    throw new RangeError(`Invalid maxAttempts: ${maxAttempts}. Must be a positive integer.`);
+  }
   // Zero-count fast path — avoid unnecessary allocation of Set/Array.
   if (count === 0) return [];
   // Clamp maxAttempts to a sane ceiling so pathological input can't spawn

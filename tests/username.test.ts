@@ -183,7 +183,23 @@ describe("username generation", () => {
     it("throws when maxAttempts is negative — clamped effectiveMax cannot enter loop", () => {
       // Math.min(-100, ceiling) → -100; the loop guard (attempts < -100) is
       // immediately false. The exhaustion Error must still fire.
-      expect(() => generateUsernames(5, -100)).toThrow(Error);
+      expect(() => generateUsernames(5, -100)).toThrow(RangeError);
+    });
+
+    it("throws when maxAttempts is zero — explicit guard fires before allocation", () => {
+      // Explicit validation: 0 and non-positive values throw RangeError immediately.
+      expect(() => generateUsernames(5, 0)).toThrow(RangeError);
+    });
+
+    it("throws for non-integer maxAttempts", () => {
+      expect(() => generateUsernames(5, 2.5)).toThrow(RangeError);
+      expect(() => generateUsernames(5, NaN)).toThrow(RangeError);
+      expect(() => generateUsernames(5, null as never)).toThrow(RangeError);
+    });
+
+    it("throws for non-positive integer maxAttempts", () => {
+      expect(() => generateUsernames(5, -1)).toThrow(RangeError);
+      expect(() => generateUsernames(5, -999)).toThrow(RangeError);
     });
 
     it("never returns malformed usernames under repeated generation", () => {
