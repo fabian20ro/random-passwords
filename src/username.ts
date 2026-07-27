@@ -45,6 +45,7 @@ export function randomFourDigitNumber(): number {
 const MAX_USERNAME_COUNT = 1024;
 
 export function generateUsernames(count: number, maxAttempts = MAX_USERNAME_COUNT * 16): string[] {
+  // Validate inputs upfront — non-positive or non-integer maxAttempts is a programmer error.
   if (!Number.isInteger(count) || count < 0 || count > MAX_USERNAME_COUNT) {
     throw new RangeError(`Invalid username count: ${count}. Must be between 0 and ${MAX_USERNAME_COUNT}.`);
   }
