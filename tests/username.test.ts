@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { generateUsername, generateUsernames, USERNAME_ADJECTIVES, USERNAME_NOUNS, randomFourDigitNumber } from "../src/username";
+import { capitalize, generateUsername, generateUsernames, USERNAME_ADJECTIVES, USERNAME_NOUNS, randomFourDigitNumber } from "../src/username";
 
 describe("username generation", () => {
   describe("randomFourDigitNumber()", () => {
@@ -51,12 +51,27 @@ describe("username generation", () => {
         expect(username).toMatch(/^[A-Z][a-z]+_[A-Z][a-z]+_[0-9]{4}$/);
       }
     });
+  });
 
-    it("returns a string with no lowercase letters in the first letter of words", () => {
+  describe("capitalize()", () => {
+    it("returns input unchanged for empty or falsy strings", () => {
+      expect(capitalize("")).toBe("");
+      expect(capitalize(null as unknown as string)).toBe(null);
+      expect(capitalize(undefined as unknown as string)).toBe(undefined);
+    });
+
+    it("capitalizes the first character of a non-empty string", () => {
       for (let i = 0; i < 50; i++) {
-        const username = generateUsername();
-        expect(username).toMatch(/^[A-Z][a-z]+_[A-Z][a-z]+_[0-9]{4}$/);
+        const input = USERNAME_ADJECTIVES[i % USERNAME_ADJECTIVES.length];
+        expect(capitalize(input)).toBe(
+          input.charAt(0).toUpperCase() + input.slice(1)
+        );
       }
+    });
+
+    it("preserves the rest of the string unchanged", () => {
+      const result = capitalize("cLeVer");
+      expect(result).toBe("CLeVer");
     });
   });
 
