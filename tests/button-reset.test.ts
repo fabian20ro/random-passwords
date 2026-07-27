@@ -1269,4 +1269,97 @@ describe("cancelButtonReset", () => {
       expect(cancelCount).toBe(2);
     });
   });
+
+  describe("cancelButtonReset direct contract", () => {
+    it ("throws TypeError on null without scheduling anything", () => {
+      const sentinel = { id: "direct-null-sentinel" };
+      scheduleButtonReset(sentinel, 100, vi.fn()); // populate WeakMap
+      expect(() => cancelButtonReset(null as any)).toThrow(TypeError);
+      expect(resetTimeouts.has(sentinel)).toBe(true);
+    });
+
+    it ("throws TypeError on undefined without scheduling anything", () => {
+      const sentinel = { id: "direct-undef-sentinel" };
+      scheduleButtonReset(sentinel, 100, vi.fn()); // populate WeakMap
+      expect(() => cancelButtonReset(undefined as any)).toThrow(TypeError);
+      expect(resetTimeouts.has(sentinel)).toBe(true);
+    });
+
+    it ("throws TypeError on primitive targets without scheduling anything", () => {
+      const sentinel = { id: "direct-prim-sentinel" };
+      scheduleButtonReset(sentinel, 100, vi.fn()); // populate WeakMap
+      for (const bad of [42, true, "string-key-cancel"]) {
+        expect(() => cancelButtonReset(bad as any)).toThrow(TypeError);
+      }
+      expect(resetTimeouts.has(sentinel)).toBe(true);
+    });
+
+    it ("throws with the documented guard message", () => {
+      try {
+        cancelButtonReset(null as any);
+      } catch (e) {
+        expect(e).toBeInstanceOf(TypeError);
+        expect((e as TypeError).message).toBe("cancelButtonReset requires an object target");
+      }
+    });
+
+    it ("returns false for unscheduled objects without throwing", () => {
+      const fresh = { id: "direct-unscheduled" };
+      expect(() => cancelButtonReset(fresh)).not.toThrow();
+      expect(cancelButtonReset(fresh)).toBe(false);
+    });
+
+    it ("clears timeout, cancel hook, and description in one call", () => {
+      const target = { id: "direct-clear-all" };
+      let cancelled = false;
+      scheduleButtonReset(target, 500, vi.fn(), "pending-reset", () => { cancelled = true; });
+
+      expect(isResetScheduled(target)).toBe(true);
+      expect(getResetDescription(target)).toBe("pending-reset");
+
+      const result = cancelButtonReset(target);
+      expect(result).toBe(true);
+      expect(cancelled).toBe(true);
+      expect(resetTimeouts.has(target)).toBe(false);
+      expect(getResetDescription(target)).toBeUndefined();
+    });
+
+    it ("does not fire reset callback after explicit cancel", () => {
+      const target = { id: "direct-no-fire" };
+      const reset = vi.fn();
+
+      scheduleButtonReset(target, 1000, reset);
+      cancelButtonReset(target);
+
+      vi.advanceTimersByTime(2000);
+      expect(reset).not.toHaveBeenCalled();
+    });
+
+    it ("works with array targets since they pass instanceof Object", () => {
+      const target: number[] = [1, 2];
+      scheduleButtonReset(target, 100, vi.fn());
+      expect(cancelButtonReset(target)).toBe(true);
+      expect(isResetScheduled(target)).toBe(false);
+    });
+
+    it ("works with function targets since they pass instanceof Object", () => {
+      const target = () => {};
+      scheduleButtonReset(target, 100, vi.fn());
+      expect(cancelButtonReset(target)).toBe(true);
+      expect(isResetScheduled(target)).toBe(false);
+    });
+
+    it ("preserves state of other targets when cancelling one", () => {
+      const busy = { id: "direct-busy" };
+      const fresh = { id: "direct-fresh-isolated" };
+      scheduleButtonReset(busy, 100, vi.fn());
+      const resetFresh = vi.fn();
+      scheduleButtonReset(fresh, 200, resetFresh);
+
+      cancelButtonReset(busy);
+
+      expect(isResetScheduled(fresh)).toBe(true);
+      expect(resetTimeouts.has(fresh)).toBe(true);
+    });
+  });
 });
