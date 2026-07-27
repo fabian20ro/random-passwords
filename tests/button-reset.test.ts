@@ -1155,5 +1155,211 @@ describe("cancelButtonReset", () => {
       // Busy should still fire at its time.
       vi.advanceTimersByTime(150);
     });
+
+    it ("does not throw when reset has fired naturally (hook already cleared)", () => {
+      const target = { id: "ret-post-fire-hook" };
+      let cancelCount = 0;
+      scheduleButtonReset(target, 100, vi.fn(), undefined, () => cancelCount++);
+
+      vi.advanceTimersByTime(150); // fires and clears hook internally via clearTimeout path
+      expect(cancelCount).toBe(0); // no explicit cancel happened — hook only fires on cancel, not expiry
+    });
+  });
+
+  describe("onCancel callback", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it ("fires onCancel when schedule is rescheduled with a new delay", () => {
+      const target = { id: "onCancel-reschedule" };
+      let cancelCount = 0;
+
+      scheduleButtonReset(target, 200, vi.fn(), undefined, () => cancelCount++);
+      expect(cancelCount).toBe(0); // not yet cancelled
+
+      vi.advanceTimersByTime(50);
+      scheduleButtonReset(target, 100, vi.fn()); // reschedule triggers onCancel on old one
+
+      expect(cancelCount).toBe(1);
+    });
+
+    it ("fires onCancel when explicitly cancelled", () => {
+      const target = { id: "onCancel-explicit" };
+      let cancelCount = 0;
+
+      scheduleButtonReset(target, 200, vi.fn(), undefined, () => cancelCount++);
+
+      cancelButtonReset(target);
+      expect(cancelCount).toBe(1);
+    });
+
+    it ("does not fire onCancel when timer fires naturally", () => {
+      const target = { id: "onCancel-expiry" };
+      let cancelCount = 0;
+
+      scheduleButtonReset(target, 100, vi.fn(), undefined, () => cancelCount++);
+
+      vi.advanceTimersByTime(150); // natural expiry — no explicit cancel
+      expect(cancelCount).toBe(0);
+    });
+
+    it ("does not fire onCancel if on the same target after reschedule (new hook replaces old)", () => {
+      const target = { id: "onCancel-replaces" };
+      let cancels = 0;
+      let firstCancelFired = false;
+
+      scheduleButtonReset(target, 200, vi.fn(), undefined, () => {
+        cancels++;
+        if (cancels === 1) firstCancelFired = true;
+      });
+
+      vi.advanceTimersByTime(50);
+      // New cancel hook — fires when this second schedule is itself cancelled later.
+      const r2 = vi.fn();
+      let cancelsAfterReschedule = 0;
+      scheduleButtonReset(target, 100, r2, undefined, () => cancelsAfterReschedule++);
+
+      expect(cancels).toBe(1); // old hook fired once on reschedule
+      expect(firstCancelFired).toBe(true);
+
+      cancelButtonReset(target); // cancels the second schedule's hook
+      expect(cancelsAfterReschedule).toBe(1);
+      expect(cancels).toBe(1); // no additional fire from first hook (already cleared)
+    });
+
+    it ("ignores non-function onCancel silently", () => {
+      const target = { id: "onCancel-non-fn" };
+      scheduleButtonReset(target, 200, vi.fn(), undefined, null as any); // null is not a function → no hook stored
+      expect(() => cancelButtonReset(target)).not.toThrow();
+    });
+
+    it ("suppresses onCancel errors so cancel still succeeds", () => {
+      const target = { id: "onCancel-error" };
+      let cancelCount = 0;
+
+      scheduleButtonReset(
+        target,
+        200,
+        vi.fn(),
+        undefined,
+        () => { throw new Error("hook boom"); }
+      );
+
+      // Must not throw — error is swallowed.
+      expect(() => cancelButtonReset(target)).not.toThrow();
+    });
+
+    it ("fires onCancel once per cancellation event", () => {
+      const target = { id: "onCancel-per-event" };
+      let cancelCount = 0;
+
+      scheduleButtonReset(target, 200, vi.fn(), undefined, () => cancelCount++);
+      expect(cancelCount).toBe(0);
+
+      cancelButtonReset(target); // cancels first schedule → hook fires once
+      expect(cancelCount).toBe(1);
+
+      scheduleButtonReset(target, 200, vi.fn(), undefined, () => cancelCount++);
+      cancelButtonReset(target); // cancels second schedule → hook fires again
+      expect(cancelCount).toBe(2);
+    });
+  });
+
+  describe("cancelButtonReset direct contract", () => {
+    it ("throws TypeError on null without scheduling anything", () => {
+      const sentinel = { id: "direct-null-sentinel" };
+      scheduleButtonReset(sentinel, 100, vi.fn()); // populate WeakMap
+      expect(() => cancelButtonReset(null as any)).toThrow(TypeError);
+      expect(resetTimeouts.has(sentinel)).toBe(true);
+    });
+
+    it ("throws TypeError on undefined without scheduling anything", () => {
+      const sentinel = { id: "direct-undef-sentinel" };
+      scheduleButtonReset(sentinel, 100, vi.fn()); // populate WeakMap
+      expect(() => cancelButtonReset(undefined as any)).toThrow(TypeError);
+      expect(resetTimeouts.has(sentinel)).toBe(true);
+    });
+
+    it ("throws TypeError on primitive targets without scheduling anything", () => {
+      const sentinel = { id: "direct-prim-sentinel" };
+      scheduleButtonReset(sentinel, 100, vi.fn()); // populate WeakMap
+      for (const bad of [42, true, "string-key-cancel"]) {
+        expect(() => cancelButtonReset(bad as any)).toThrow(TypeError);
+      }
+      expect(resetTimeouts.has(sentinel)).toBe(true);
+    });
+
+    it ("throws with the documented guard message", () => {
+      try {
+        cancelButtonReset(null as any);
+      } catch (e) {
+        expect(e).toBeInstanceOf(TypeError);
+        expect((e as TypeError).message).toBe("cancelButtonReset requires an object target");
+      }
+    });
+
+    it ("returns false for unscheduled objects without throwing", () => {
+      const fresh = { id: "direct-unscheduled" };
+      expect(() => cancelButtonReset(fresh)).not.toThrow();
+      expect(cancelButtonReset(fresh)).toBe(false);
+    });
+
+    it ("clears timeout, cancel hook, and description in one call", () => {
+      const target = { id: "direct-clear-all" };
+      let cancelled = false;
+      scheduleButtonReset(target, 500, vi.fn(), "pending-reset", () => { cancelled = true; });
+
+      expect(isResetScheduled(target)).toBe(true);
+      expect(getResetDescription(target)).toBe("pending-reset");
+
+      const result = cancelButtonReset(target);
+      expect(result).toBe(true);
+      expect(cancelled).toBe(true);
+      expect(resetTimeouts.has(target)).toBe(false);
+      expect(getResetDescription(target)).toBeUndefined();
+    });
+
+    it ("does not fire reset callback after explicit cancel", () => {
+      const target = { id: "direct-no-fire" };
+      const reset = vi.fn();
+
+      scheduleButtonReset(target, 1000, reset);
+      cancelButtonReset(target);
+
+      vi.advanceTimersByTime(2000);
+      expect(reset).not.toHaveBeenCalled();
+    });
+
+    it ("works with array targets since they pass instanceof Object", () => {
+      const target: number[] = [1, 2];
+      scheduleButtonReset(target, 100, vi.fn());
+      expect(cancelButtonReset(target)).toBe(true);
+      expect(isResetScheduled(target)).toBe(false);
+    });
+
+    it ("works with function targets since they pass instanceof Object", () => {
+      const target = () => {};
+      scheduleButtonReset(target, 100, vi.fn());
+      expect(cancelButtonReset(target)).toBe(true);
+      expect(isResetScheduled(target)).toBe(false);
+    });
+
+    it ("preserves state of other targets when cancelling one", () => {
+      const busy = { id: "direct-busy" };
+      const fresh = { id: "direct-fresh-isolated" };
+      scheduleButtonReset(busy, 100, vi.fn());
+      const resetFresh = vi.fn();
+      scheduleButtonReset(fresh, 200, resetFresh);
+
+      cancelButtonReset(busy);
+
+      expect(isResetScheduled(fresh)).toBe(true);
+      expect(resetTimeouts.has(fresh)).toBe(true);
+    });
   });
 });

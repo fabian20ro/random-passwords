@@ -142,6 +142,19 @@ describe("getSecureRandomInt", () => {
     expect(() => getSecureRandomInt(NaN)).toThrow("Max must be between 1 and UINT32_MODULUS");
   });
 
+  it("throws if max is undefined", () => {
+    expect(() => getSecureRandomInt(undefined as any)).toThrow("Max must be between 1 and UINT32_MODULUS");
+  });
+
+  it("throws if min is a non-integer float (e.g. 0.5)", () => {
+    expect(() => getSecureRandomInt(10, 0.5)).toThrow("Min must be a non-negative integer");
+  });
+
+  it("throws if max exceeds Number.MAX_SAFE_INTEGER", () => {
+    // MAX_SAFE_INTEGER > UINT32_MODULUS so the guard rejects it on range
+    expect(() => getSecureRandomInt(Number.MAX_SAFE_INTEGER)).toThrow();
+  });
+
   it("throws when Crypto API is unavailable (crypto missing)", () => {
     Object.defineProperty(globalThis, "crypto", { value: undefined, configurable: true, writable: true });
     try {
