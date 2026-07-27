@@ -61,6 +61,13 @@ export function scheduleButtonReset(
   description?: string,
   onCancel?: () => void,
 ): void {
+  // Validate inputs before side effects — rejecting an invalid reset callback
+  // must not leave orphaned state in any WeakMap. Cancel prior schedule and
+  // attach new metadata only after all guards pass.
+  if (typeof reset !== "function") {
+    return;
+  }
+
   cancelButtonReset(target);
 
   // If this schedule has a cancel hook, attach it — it fires when the pending
@@ -68,12 +75,6 @@ export function scheduleButtonReset(
   // clear so it does not fire on its own cancellation.
   if (typeof onCancel === "function") {
     resetCancelHooks.set(target, onCancel);
-  }
-
-  // Reject a missing or non-callable reset callback — a stale schedule with no
-  // handler would fire and silently throw on `reset()`, crashing the page.
-  if (typeof reset !== "function") {
-    return;
   }
 
   // Attach the semantic description alongside the timeout identity so callers
