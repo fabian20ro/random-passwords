@@ -30,11 +30,9 @@ function capitalize(s: string): string {
 }
 
 export function generateUsername(includeNumber: boolean = true): string {
-  const parts = [capitalize(USERNAME_ADJECTIVES[getSecureRandomInt(USERNAME_ADJECTIVES.length)]), capitalize(USERNAME_NOUNS[getSecureRandomInt(USERNAME_NOUNS.length)])];
-  if (includeNumber) {
-    parts.push(randomFourDigitNumber().toString());
-  }
-  return parts.join("_");
+  const adj = capitalize(USERNAME_ADJECTIVES[getSecureRandomInt(USERNAME_ADJECTIVES.length)]);
+  const noun = capitalize(USERNAME_NOUNS[getSecureRandomInt(USERNAME_NOUNS.length)]);
+  return includeNumber ? `${adj}_${noun}_${randomFourDigitNumber()}` : `${adj}_${noun}`;
 }
 
 export { capitalize };
