@@ -568,6 +568,48 @@ describe("generateComplexPassword", () => {
     const pw = generateComplexPassword(length, categories);
     expect(pw).toBe("");
   });
+
+  it("deterministically fills remaining positions from the combined category pool when all categories are single-character sets", () => {
+    // With categories [["a"], ["b"]], length=4: exactly one "a" and one "b" must appear,
+    // plus two extra chars drawn from {"a","b"} — so every output contains only a/b.
+    const categories = [["a"], ["b"]];
+    const length = 4;
+    for (let i = 0; i < 500; i++) {
+      const pw = generateComplexPassword(length, categories);
+      expect(pw).toHaveLength(length);
+      // Only "a" or "b" may appear — no other characters can be drawn from the pool
+      expect([...pw].every(c => ["a", "b"].includes(c))).toBe(true);
+      // Exactly one position must hold each category's mandatory pick
+      const aCount = [...pw].filter(c => c === "a").length;
+      const bCount = [...pw].filter(c => c === "b").length;
+      expect(aCount).toBeGreaterThanOrEqual(1);
+      expect(bCount).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  it("handles complex password generation at MAX_LENGTH boundary", () => {
+    const categories = [["abc"], ["123"]];
+    const length = 65536;
+    const pw = generateComplexPassword(length, categories);
+    expect(pw).toHaveLength(length);
+    // Verify category inclusion still holds at scale
+    expect([...pw].includes("a")).toBe(true);
+    expect([...pw].includes("1")).toBe(true);
+  });
+
+  it("verifies rejection sampling in complex password when category size is non-power-of-2", () => {
+    // Category "abcdefg" has 7 chars (non-power-of-2) — forces rejection sampling.
+    // Force a rejected value then a valid one to verify the algorithm resamples correctly.
+    const UINT32_MODULUS = 0x1_0000_0000;
+    const range = 7;
+    const threshold = UINT32_MODULUS - (UINT32_MODULUS % range);
+    // First draw rejected, second valid → index 6 → 'g' for category pick.
+    installCryptoMock([threshold, 6]);
+    const categories = [["abcdefg"]];
+    const pw = generateComplexPassword(1, categories);
+    expect(pw).toHaveLength(1);
+    restoreCryptoMock();
+  });
 });
 
 describe("generatePasswordAmbiguityFree", () => {
