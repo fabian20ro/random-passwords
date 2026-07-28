@@ -130,11 +130,17 @@ function generate(): void {
 
     if (categories.length > 0) {
       // Complex mode: generate one password per category for direct copy-paste,
-      // plus the combined complex password.
+      // plus the combined complex password. When only one category is selected,
+      // the per-category password equals the combined result — skip it to avoid
+      // rendering duplicate output.
       const complexLen = 24;
-      const categoryPasswords = categories.map(cat => generateComplexPassword(complexLen, [cat]));
-      const combined = generateComplexPassword(complexLen, categories);
-      passwords = [...categoryPasswords, combined].filter(pw => pw.length > 0);
+      if (categories.length === 1) {
+        passwords = [generateComplexPassword(complexLen, categories)].filter(pw => pw.length > 0);
+      } else {
+        const categoryPasswords = categories.map(cat => generateComplexPassword(complexLen, [cat]));
+        const combined = generateComplexPassword(complexLen, categories);
+        passwords = [...categoryPasswords, combined].filter(pw => pw.length > 0);
+      }
     } else {
       passwords = generateAll();
     }
