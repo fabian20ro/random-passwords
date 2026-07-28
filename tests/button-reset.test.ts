@@ -1324,6 +1324,21 @@ describe("cancelButtonReset", () => {
       expect(getResetDescription(target)).toBeUndefined();
     });
 
+    it ("clears reset description when no cancel hook is set", () => {
+      // Regression: description cleanup must happen unconditionally during
+      // cancellation — the WeakMap.delete for descriptions sits outside the
+      // cancel-hook branch and must fire even when no onCancel was registered.
+      const target = { id: "direct-desc-only" };
+      scheduleButtonReset(target, 100, vi.fn(), "just-a-desc");
+
+      expect(getResetDescription(target)).toBe("just-a-desc");
+
+      cancelButtonReset(target);
+
+      // Description must be gone — this is the contract surface under test.
+      expect(getResetDescription(target)).toBeUndefined();
+    });
+
     it ("does not fire reset callback after explicit cancel", () => {
       const target = { id: "direct-no-fire" };
       const reset = vi.fn();
