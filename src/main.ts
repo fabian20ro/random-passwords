@@ -2,7 +2,7 @@ import { generateAll } from "./password";
 import { copyTextToClipboard } from "./clipboard";
 import { scheduleButtonReset } from "./button-reset";
 import { generateUsernames } from "./username";
-import { generateComplexPassword, CHARS as CHARSET_UPPER_LOWER_DIGIT } from "./password";
+import { generateComplexPassword, DEFAULT_LENGTH, CHARS as CHARSET_UPPER_LOWER_DIGIT } from "./password";
 
 const COPY_ICON = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="8" height="8" rx="1.5"/><path d="M3.5 10.5h-1a1.5 1.5 0 0 1-1.5-1.5v-6a1.5 1.5 0 0 1 1.5-1.5h6a1.5 1.5 0 0 1 1.5 1.5v1"/></svg>`;
 
@@ -130,11 +130,17 @@ function generate(): void {
 
     if (categories.length > 0) {
       // Complex mode: generate one password per category for direct copy-paste,
-      // plus the combined complex password.
-      const complexLen = 24;
-      const categoryPasswords = categories.map(cat => generateComplexPassword(complexLen, [cat]));
-      const combined = generateComplexPassword(complexLen, categories);
-      passwords = [...categoryPasswords, combined].filter(pw => pw.length > 0);
+      // plus the combined complex password. When only one category is selected,
+      // the per-category password equals the combined result — skip it to avoid
+      // rendering duplicate output.
+      const complexLen = DEFAULT_LENGTH;
+      if (categories.length === 1) {
+        passwords = [generateComplexPassword(complexLen, categories)].filter(pw => pw.length > 0);
+      } else {
+        const categoryPasswords = categories.map(cat => generateComplexPassword(complexLen, [cat]));
+        const combined = generateComplexPassword(complexLen, categories);
+        passwords = [...categoryPasswords, combined].filter(pw => pw.length > 0);
+      }
     } else {
       passwords = generateAll();
     }
