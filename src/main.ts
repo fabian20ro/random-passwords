@@ -121,33 +121,38 @@ function getSelectedCategories(): string[][] {
 }
 
 function generate(): void {
-  const passwordContainer = document.getElementById("passwords") as HTMLDivElement;
-  const usernameContainer = document.getElementById("usernames") as HTMLDivElement;
+  try {
+    const passwordContainer = document.getElementById("passwords") as HTMLDivElement;
+    const usernameContainer = document.getElementById("usernames") as HTMLDivElement;
 
-  const categories = getSelectedCategories();
-  let passwords: string[];
+    const categories = getSelectedCategories();
+    let passwords: string[];
 
-  if (categories.length > 0) {
-    // Complex mode: generate one password per category for direct copy-paste,
-    // plus the combined complex password.
-    const complexLen = 24;
-    const categoryPasswords = categories.map(cat => generateComplexPassword(complexLen, [cat]));
-    const combined = generateComplexPassword(complexLen, categories);
-    passwords = [...categoryPasswords, combined];
-  } else {
-    passwords = generateAll();
-  }
+    if (categories.length > 0) {
+      // Complex mode: generate one password per category for direct copy-paste,
+      // plus the combined complex password.
+      const complexLen = 24;
+      const categoryPasswords = categories.map(cat => generateComplexPassword(complexLen, [cat]));
+      const combined = generateComplexPassword(complexLen, categories);
+      passwords = [...categoryPasswords, combined];
+    } else {
+      passwords = generateAll();
+    }
 
-  const usernames = generateUsernames(USERNAME_COUNT);
+    const usernames = generateUsernames(USERNAME_COUNT);
 
-  renderRows(passwordContainer, passwords);
-  renderRows(usernameContainer, usernames);
+    renderRows(passwordContainer, passwords);
+    renderRows(usernameContainer, usernames);
 
-  if (categories.length > 0) {
-    const catNames = categories.map(cat => CATEGORY_DEFS.find(d => d.chars === cat[0])?.label ?? "Custom");
-    announceStatus(`Generated ${passwords.length} complex passwords using ${catNames.join(", ")}.`);
-  } else {
-    announceStatus(`Generated ${passwords.length} new passwords and ${usernames.length} usernames.`);
+    if (categories.length > 0) {
+      const catNames = categories.map(cat => CATEGORY_DEFS.find(d => d.chars === cat[0])?.label ?? "Custom");
+      announceStatus(`Generated ${passwords.length} complex passwords using ${catNames.join(", ")}.`);
+    } else {
+      announceStatus(`Generated ${passwords.length} new passwords and ${usernames.length} usernames.`);
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Generation failed.";
+    announceStatus(message, true);
   }
 }
 

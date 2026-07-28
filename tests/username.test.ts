@@ -51,6 +51,33 @@ describe("username generation", () => {
         expect(username).toMatch(/^[A-Z][a-z]+_[A-Z][a-z]+_[0-9]{4}$/);
       }
     });
+
+    it("returns two parts when includeNumber is false", () => {
+      for (let i = 0; i < 50; i++) {
+        const username = generateUsername(false);
+        const parts = username.split("_");
+        expect(parts).toHaveLength(2);
+        expect(parts[0]).toMatch(/^[A-Z][a-z]+$/);
+        expect(parts[1]).toMatch(/^[A-Z][a-z]+$/);
+      }
+    });
+
+    it("returns format without number suffix for includeNumber=false", () => {
+      for (let i = 0; i < 50; i++) {
+        const username = generateUsername(false);
+        expect(username).toMatch(/^[A-Z][a-z]+_[A-Z][a-z]+$/);
+        expect(username).not.toMatch(/[0-9]{4}$/);
+      }
+    });
+
+    it("only emits adjectives and nouns from their defined lists (includeNumber=false)", () => {
+      for (let i = 0; i < 100; i++) {
+        const username = generateUsername(false);
+        const [adj, noun] = username.split("_");
+        expect(USERNAME_ADJECTIVES).toContain(adj.toLowerCase());
+        expect(USERNAME_NOUNS).toContain(noun.toLowerCase());
+      }
+    });
   });
 
   describe("capitalize()", () => {

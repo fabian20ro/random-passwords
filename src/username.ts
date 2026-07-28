@@ -44,24 +44,23 @@ export function randomFourDigitNumber(): number {
 
 const MAX_USERNAME_COUNT = 1024;
 
-export function generateUsernames(count: number, maxAttempts = MAX_USERNAME_COUNT * 16): string[] {
+export function generateUsernames(count: number, maxAttempts?: number, includeNumber?: boolean): string[] {
   // Validate inputs upfront — non-positive or non-integer maxAttempts is a programmer error.
   if (!Number.isInteger(count) || count < 0 || count > MAX_USERNAME_COUNT) {
     throw new RangeError(`Invalid username count: ${count}. Must be between 0 and ${MAX_USERNAME_COUNT}.`);
   }
-  if (!Number.isInteger(maxAttempts) || maxAttempts <= 0) {
-    throw new RangeError(`Invalid maxAttempts: ${maxAttempts}. Must be a positive integer.`);
-  }
+  const effectiveMax = maxAttempts !== undefined ? (
+    !Number.isInteger(maxAttempts) || maxAttempts <= 0
+      ? (() => { throw new RangeError(`Invalid maxAttempts: ${maxAttempts}. Must be a positive integer.`); })()
+      : Math.min(maxAttempts, MAX_USERNAME_COUNT * 64)
+  ) : Math.min(MAX_USERNAME_COUNT * 16, MAX_USERNAME_COUNT * 64);
   // Zero-count fast path — avoid unnecessary allocation of Set/Array.
   if (count === 0) return [];
-  // Clamp maxAttempts to a sane ceiling so pathological input can't spawn
-  // a loop that exhausts memory before producing any results.
-  const effectiveMax = Math.min(maxAttempts, MAX_USERNAME_COUNT * 64);
   const seen = new Set<string>();
   const result: string[] = [];
   let attempts = 0;
   while (result.length < count && attempts < effectiveMax) {
-    const username = generateUsername();
+    const username = generateUsername(includeNumber);
     if (!seen.has(username)) {
       seen.add(username);
       result.push(username);
