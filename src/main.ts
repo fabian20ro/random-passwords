@@ -134,7 +134,7 @@ function generate(): void {
       const complexLen = 24;
       const categoryPasswords = categories.map(cat => generateComplexPassword(complexLen, [cat]));
       const combined = generateComplexPassword(complexLen, categories);
-      passwords = [...categoryPasswords, combined];
+      passwords = [...categoryPasswords, combined].filter(pw => pw.length > 0);
     } else {
       passwords = generateAll();
     }
