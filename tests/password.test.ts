@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { generatePassword, generatePasswordWithCharset, generatePasswordWithSymbols, generatePasswordWithLettersOnly, generatePasswordWithNumbersOnly, generateAll, LENGTHS, CHARSET_LEN, isValidPassword, generateComplexPassword, MAX_LENGTH, CHARS, SYMBOLS, generatePasswordAmbiguityFree } from "../src/password";
+import { generatePassword, generatePasswordWithCharset, generatePasswordWithSymbols, generatePasswordWithLettersOnly, generatePasswordWithNumbersOnly, generateAll, LENGTHS, CHARSET_LEN, isValidPassword, generateComplexPassword, MAX_LENGTH, CHARS, SYMBOLS, generatePasswordAmbiguityFree, generatePasswordAmbiguityFreeWithSymbols } from "../src/password";
 import { getSecureRandomInt } from "../src/crypto-utils";
 
 const originalCrypto = globalThis.crypto;
@@ -125,6 +125,33 @@ describe("generatePassword", () => {
     }
   });
 
+  it("enforces diversity via fallback injection when retries are exhausted", () => {
+    // With maxRetries=0 the loop never runs — injectMissingClasses must guarantee diversity.
+    const passwords = generateAll(1, { minClassesPerPassword: 3, maxRetries: 0 });
+    for (const pw of passwords) {
+      expect(pw.length).toBeGreaterThan(0);
+      // Diversity must be guaranteed — no randomness can satisfy this with 0 retries.
+      const hasUpper = /[A-Z]/.test(pw);
+      const hasLower = /[a-z]/.test(pw);
+      const hasDigit = /[0-9]/.test(pw);
+      expect(hasUpper && hasLower && hasDigit).toBe(true);
+    }
+  });
+
+  it("injectMissingClasses tracks per-class slots to prevent cross-class overwrite", () => {
+    // Force many retries exhausted so the fallback path runs reliably; verify that
+    // when multiple classes are injected, each class occupies a distinct slot.
+    const passwords = generateAll(1000, { minClassesPerPassword: 3, maxRetries: 0 });
+    for (const pw of passwords) {
+      expect(pw.length).toBeGreaterThan(0);
+      // All three classes must be present — if cross-class overwrite corrupted an injection, one class would vanish.
+      const hasUpper = /[A-Z]/.test(pw);
+      const hasLower = /[a-z]/.test(pw);
+      const hasDigit = /[0-9]/.test(pw);
+      expect(hasUpper && hasLower && hasDigit).toBe(true);
+    }
+  });
+
   it("generates ambiguity-free passwords when ambiguityFree option is true", () => {
     const passwords = generateAll(5, { ambiguityFree: true });
     for (const pw of passwords) {
@@ -152,6 +179,18 @@ describe("generatePassword", () => {
     expect(passwords.length).toBeGreaterThan(LENGTHS.length * 49);
     for (const pw of passwords) {
       expect(pw.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("generates ambiguity-free passwords with symbols — no ambiguous chars, includes symbol characters", () => {
+    const length = 32;
+    for (let i = 0; i < 100; i++) {
+      const pw = generatePasswordAmbiguityFreeWithSymbols(length);
+      expect(pw).toHaveLength(length);
+      // No ambiguous chars: 0, O, l, I, 1
+      expect([...pw].every(c => !["0", "O", "l", "I", "1"].includes(c))).toBe(true);
+      // Must contain at least one symbol (statistical — with ~37% of charset being symbols, 100 trials should all succeed)
+      expect(/[!@#$%^&*()\-_=+\[\]{}|;:,.<>?]/.test(pw)).toBe(true);
     }
   });
 
