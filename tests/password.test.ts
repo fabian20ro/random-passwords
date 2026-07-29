@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { generatePassword, generatePasswordWithCharset, generatePasswordWithSymbols, generatePasswordWithLettersOnly, generatePasswordWithNumbersOnly, generateAll, LENGTHS, CHARSET_LEN, isValidPassword, generateComplexPassword, MAX_LENGTH, CHARS, SYMBOLS, generatePasswordAmbiguityFree } from "../src/password";
+import { generatePassword, generatePasswordWithCharset, generatePasswordWithSymbols, generatePasswordWithLettersOnly, generatePasswordWithNumbersOnly, generateAll, LENGTHS, CHARSET_LEN, isValidPassword, generateComplexPassword, MAX_LENGTH, CHARS, SYMBOLS, generatePasswordAmbiguityFree, generatePasswordAmbiguityFreeWithSymbols } from "../src/password";
 import { getSecureRandomInt } from "../src/crypto-utils";
 
 const originalCrypto = globalThis.crypto;
@@ -179,6 +179,18 @@ describe("generatePassword", () => {
     expect(passwords.length).toBeGreaterThan(LENGTHS.length * 49);
     for (const pw of passwords) {
       expect(pw.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("generates ambiguity-free passwords with symbols — no ambiguous chars, includes symbol characters", () => {
+    const length = 32;
+    for (let i = 0; i < 100; i++) {
+      const pw = generatePasswordAmbiguityFreeWithSymbols(length);
+      expect(pw).toHaveLength(length);
+      // No ambiguous chars: 0, O, l, I, 1
+      expect([...pw].every(c => !["0", "O", "l", "I", "1"].includes(c))).toBe(true);
+      // Must contain at least one symbol (statistical — with ~37% of charset being symbols, 100 trials should all succeed)
+      expect(/[!@#$%^&*()\-_=+\[\]{}|;:,.<>?]/.test(pw)).toBe(true);
     }
   });
 

@@ -24,6 +24,9 @@ function filterAmbiguousCharset(charset: string): string {
 /** Pre-computed ambiguity-free alphanumeric charset — constant at module load. */
 const AMBIGUITY_FREE_CHARSET = filterAmbiguousCharset(CHARS);
 
+/** Pre-computed ambiguity-free charset including symbols — constant at module load. Symbols have no visually ambiguous characters, so only the alphanumeric portion is filtered. */
+const AMBIGUITY_FREE_SYMBOLS_CHARSET = AMBIGUITY_FREE_CHARSET + SYMBOLS;
+
 /**
  * Generates a cryptographically secure random password with no visually ambiguous characters.
  * Useful for manual copy-paste use cases where chars like '0'/'O', 'l'/'I', '1' are hard to distinguish.
@@ -34,6 +37,18 @@ const AMBIGUITY_FREE_CHARSET = filterAmbiguousCharset(CHARS);
 export function generatePasswordAmbiguityFree(length: number): string {
   if (AMBIGUITY_FREE_CHARSET.length === 0) return "";
   return generatePasswordWithCharset(length, AMBIGUITY_FREE_CHARSET);
+}
+
+/**
+ * Generates a cryptographically secure random password with no visually ambiguous characters,
+ * including symbols. Symbols are not visually ambiguous by design; only the alphanumeric portion
+ * is filtered (removing 0/O/1/I/l). Useful for copy-paste use cases requiring full strength.
+ *
+ * @param length The desired length of the password.
+ * @returns The generated password string, or empty string if charset is exhausted.
+ */
+export function generatePasswordAmbiguityFreeWithSymbols(length: number): string {
+  return generatePasswordWithCharset(length, AMBIGUITY_FREE_SYMBOLS_CHARSET);
 }
 
 /**
