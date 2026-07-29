@@ -125,6 +125,33 @@ describe("generatePassword", () => {
     }
   });
 
+  it("enforces diversity via fallback injection when retries are exhausted", () => {
+    // With maxRetries=0 the loop never runs — injectMissingClasses must guarantee diversity.
+    const passwords = generateAll(1, { minClassesPerPassword: 3, maxRetries: 0 });
+    for (const pw of passwords) {
+      expect(pw.length).toBeGreaterThan(0);
+      // Diversity must be guaranteed — no randomness can satisfy this with 0 retries.
+      const hasUpper = /[A-Z]/.test(pw);
+      const hasLower = /[a-z]/.test(pw);
+      const hasDigit = /[0-9]/.test(pw);
+      expect(hasUpper && hasLower && hasDigit).toBe(true);
+    }
+  });
+
+  it("injectMissingClasses tracks per-class slots to prevent cross-class overwrite", () => {
+    // Force many retries exhausted so the fallback path runs reliably; verify that
+    // when multiple classes are injected, each class occupies a distinct slot.
+    const passwords = generateAll(1000, { minClassesPerPassword: 3, maxRetries: 0 });
+    for (const pw of passwords) {
+      expect(pw.length).toBeGreaterThan(0);
+      // All three classes must be present — if cross-class overwrite corrupted an injection, one class would vanish.
+      const hasUpper = /[A-Z]/.test(pw);
+      const hasLower = /[a-z]/.test(pw);
+      const hasDigit = /[0-9]/.test(pw);
+      expect(hasUpper && hasLower && hasDigit).toBe(true);
+    }
+  });
+
   it("generates ambiguity-free passwords when ambiguityFree option is true", () => {
     const passwords = generateAll(5, { ambiguityFree: true });
     for (const pw of passwords) {
