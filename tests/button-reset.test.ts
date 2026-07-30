@@ -484,6 +484,50 @@ describe("scheduleButtonReset", () => {
     expect(reset2).toHaveBeenCalled();
   });
 
+  it ("does not cancel a valid pre-existing schedule when given an undefined callback", () => {
+    const target = { id: "guard-undefined" };
+    const pendingReset = vi.fn();
+    scheduleButtonReset(target, 100, pendingReset);
+    expect(isResetScheduled(target)).toBe(true);
+
+    // Invalid callback — must not touch the existing schedule.
+    scheduleButtonReset(target, 100, undefined as any);
+
+    // Old schedule survives: still tracked AND will fire at its original time.
+    expect(isResetScheduled(target)).toBe(true);
+    vi.advanceTimersByTime(100);
+    expect(pendingReset).toHaveBeenCalledTimes(1);
+  });
+
+  it ("does not cancel a valid pre-existing schedule when given a string callback", () => {
+    const target = { id: "guard-string" };
+    const pendingReset = vi.fn();
+    scheduleButtonReset(target, 200, pendingReset);
+    expect(isResetScheduled(target)).toBe(true);
+
+    scheduleButtonReset(target, 100, "not-a-function" as any);
+
+    expect(isResetScheduled(target)).toBe(true);
+    // Original 200ms delay must fire, not the (non-scheduled) 100ms.
+    vi.advanceTimersByTime(199);
+    expect(pendingReset).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(pendingReset).toHaveBeenCalledTimes(1);
+  });
+
+  it ("does not cancel a valid pre-existing schedule when given null callback", () => {
+    const target = { id: "guard-null" };
+    const pendingReset = vi.fn();
+    scheduleButtonReset(target, 150, pendingReset);
+    expect(isResetScheduled(target)).toBe(true);
+
+    scheduleButtonReset(target, 100, null as any);
+
+    expect(isResetScheduled(target)).toBe(true);
+    vi.advanceTimersByTime(150);
+    expect(pendingReset).toHaveBeenCalledTimes(1);
+  });
+
   it ("does not throw when clearing an undefined timeout (first call on a new target)", () => {
     const target = { id: "fresh" };
     const reset = vi.fn();
@@ -1376,5 +1420,87 @@ describe("cancelButtonReset", () => {
       expect(isResetScheduled(fresh)).toBe(true);
       expect(resetTimeouts.has(fresh)).toBe(true);
     });
+  });
+});
+
+describe("getResetDescription", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it ("returns undefined for an unscheduled target", () => {
+    const fresh = { id: "get-desc-unscheduled" };
+    expect(getResetDescription(fresh)).toBeUndefined();
+  });
+
+  it ("does not store description when scheduleButtonReset receives empty string", () => {
+    // Contract invariant: empty descriptions carry no semantic content and are rejected.
+    const target = { id: "get-desc-empty-reject" };
+    scheduleButtonReset(target, 100, vi.fn(), "");
+
+    expect(getResetDescription(target)).toBeUndefined();
+    expect(resetDescriptions.has(target)).toBe(false);
+  });
+
+  it ("stores description only when a non-empty string is provided", () => {
+    const target = { id: "get-desc-stored" };
+    scheduleButtonReset(target, 100, vi.fn(), "active-query");
+
+    expect(getResetDescription(target)).toBe("active-query");
+    expect(resetDescriptions.has(target)).toBe(true);
+  });
+
+  it ("overwrites description on reschedule", () => {
+    const target = { id: "get-desc-overwrite" };
+    scheduleButtonReset(target, 200, vi.fn(), "first-descriptor");
+    expect(getResetDescription(target)).toBe("first-descriptor");
+
+    scheduleButtonReset(target, 150, vi.fn(), "second-descriptor");
+    expect(getResetDescription(target)).toBe("second-descriptor");
+  });
+
+  it ("returns undefined for null target without throwing or leaking", () => {
+    const sentinel = { id: "get-desc-null-sentinel" };
+    scheduleButtonReset({ id: "pre-null" }, 100, vi.fn(), "busy-desc");
+    expect(resetDescriptions.has(sentinel)).toBe(false);
+
+    expect(() => getResetDescription(null as any)).not.toThrow();
+    expect(getResetDescription(null as any)).toBeUndefined();
+    expect(resetDescriptions.has(sentinel)).toBe(false);
+  });
+
+  it ("returns undefined for undefined target without throwing or leaking", () => {
+    const sentinel = { id: "get-desc-undef-sentinel" };
+    scheduleButtonReset({ id: "pre-undef" }, 100, vi.fn(), "busy-desc");
+    expect(resetDescriptions.has(sentinel)).toBe(false);
+
+    expect(() => getResetDescription(undefined as any)).not.toThrow();
+    expect(getResetDescription(undefined as any)).toBeUndefined();
+    expect(resetDescriptions.has(sentinel)).toBe(false);
+  });
+
+  it ("returns undefined for primitive targets without throwing or leaking", () => {
+    const sentinel = { id: "get-desc-prim-sentinel" };
+    scheduleButtonReset({ id: "pre-prim" }, 100, vi.fn(), "busy-desc");
+    expect(resetDescriptions.has(sentinel)).toBe(false);
+
+    for (const bad of ["string-key", 42]) {
+      expect(() => getResetDescription(bad as any)).not.toThrow();
+      expect(getResetDescription(bad as any)).toBeUndefined();
+      expect(resetDescriptions.has(sentinel)).toBe(false);
+    }
+  });
+
+  it ("returns undefined after cancelButtonReset clears the description", () => {
+    const target = { id: "get-desc-post-cancel" };
+    scheduleButtonReset(target, 100, vi.fn(), "pending-action");
+    expect(getResetDescription(target)).toBe("pending-action");
+
+    cancelButtonReset(target);
+    expect(getResetDescription(target)).toBeUndefined();
   });
 });
