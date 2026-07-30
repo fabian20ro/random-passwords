@@ -1219,7 +1219,46 @@ describe("cancelButtonReset", () => {
       vi.useRealTimers();
     });
 
-    it ("fires onCancel when schedule is rescheduled with a new delay", () => {
+    it ("does not fire when cancel hook is absent (no onCancel registered)", () => {
+      const target = { id: "onCancel-no-hook" };
+      let cancelCount = 0;
+
+      scheduleButtonReset(target, 200, vi.fn()); // no onCancel argument
+
+      cancelButtonReset(target);
+      expect(cancelCount).toBe(0);
+    });
+
+    it ("does not fire onCancel when rescheduling without a hook on the new schedule", () => {
+      const target = { id: "onCancel-reschedule-no-hook" };
+      let cancelCount = 0;
+
+      scheduleButtonReset(target, 200, vi.fn(), undefined, () => cancelCount++);
+
+      vi.advanceTimersByTime(50);
+      scheduleButtonReset(target, 100, vi.fn()); // new schedule has no onCancel
+
+      expect(cancelCount).toBe(1); // old hook fired once on reschedule
+    });
+
+    it ("fires onCancel exactly once during rapid consecutive reschedules", () => {
+      const target = { id: "onCancel-rapid" };
+      let cancelCount = 0;
+
+      scheduleButtonReset(target, 500, vi.fn(), undefined, () => cancelCount++);
+
+      vi.advanceTimersByTime(10);
+      scheduleButtonReset(target, 400, vi.fn()); // reschedule → onCancel fires once (first hook)
+      expect(cancelCount).toBe(1);
+
+      // Second reschedule cancels the second schedule's hook — it also fires.
+      scheduleButtonReset(target, 300, vi.fn(), undefined, () => cancelCount++);
+      vi.advanceTimersByTime(10);
+      scheduleButtonReset(target, 200, vi.fn()); // reschedule → onCancel fires second time (second hook)
+      expect(cancelCount).toBe(2);
+    });
+
+    it ("fires when schedule is rescheduled with a new delay", () => {
       const target = { id: "onCancel-reschedule" };
       let cancelCount = 0;
 
