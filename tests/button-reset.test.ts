@@ -484,6 +484,50 @@ describe("scheduleButtonReset", () => {
     expect(reset2).toHaveBeenCalled();
   });
 
+  it ("does not cancel a valid pre-existing schedule when given an undefined callback", () => {
+    const target = { id: "guard-undefined" };
+    const pendingReset = vi.fn();
+    scheduleButtonReset(target, 100, pendingReset);
+    expect(isResetScheduled(target)).toBe(true);
+
+    // Invalid callback — must not touch the existing schedule.
+    scheduleButtonReset(target, 100, undefined as any);
+
+    // Old schedule survives: still tracked AND will fire at its original time.
+    expect(isResetScheduled(target)).toBe(true);
+    vi.advanceTimersByTime(100);
+    expect(pendingReset).toHaveBeenCalledTimes(1);
+  });
+
+  it ("does not cancel a valid pre-existing schedule when given a string callback", () => {
+    const target = { id: "guard-string" };
+    const pendingReset = vi.fn();
+    scheduleButtonReset(target, 200, pendingReset);
+    expect(isResetScheduled(target)).toBe(true);
+
+    scheduleButtonReset(target, 100, "not-a-function" as any);
+
+    expect(isResetScheduled(target)).toBe(true);
+    // Original 200ms delay must fire, not the (non-scheduled) 100ms.
+    vi.advanceTimersByTime(199);
+    expect(pendingReset).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(pendingReset).toHaveBeenCalledTimes(1);
+  });
+
+  it ("does not cancel a valid pre-existing schedule when given null callback", () => {
+    const target = { id: "guard-null" };
+    const pendingReset = vi.fn();
+    scheduleButtonReset(target, 150, pendingReset);
+    expect(isResetScheduled(target)).toBe(true);
+
+    scheduleButtonReset(target, 100, null as any);
+
+    expect(isResetScheduled(target)).toBe(true);
+    vi.advanceTimersByTime(150);
+    expect(pendingReset).toHaveBeenCalledTimes(1);
+  });
+
   it ("does not throw when clearing an undefined timeout (first call on a new target)", () => {
     const target = { id: "fresh" };
     const reset = vi.fn();
