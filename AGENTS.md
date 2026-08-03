@@ -10,7 +10,7 @@ work style: telegraph; noun-phrases ok; drop grammar; min tokens.
 - **CSP blocks external resources** — `index.html` has strict CSP. no CDN scripts, no external stylesheets. ES modules from same origin only.
 - **rejection sampling intentional** — `while (val >= REJECT_THRESHOLD)` in `src/password.ts` eliminates modulo bias. security hardening — do not simplify.
 - **zero runtime deps by design** — only `devDependencies`. intentional. do not add runtime deps.
-- **Vite base path required** — `base: "/password-generator/"` needed for GitHub Pages deployment. removing breaks live site.
+- **Vite base path required** — `base: "/random-passwords/"` needed for GitHub Pages deployment. removing breaks live site.
 
 ## Legacy & Deprecated
 

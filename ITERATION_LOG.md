@@ -246,3 +246,13 @@
 **Outcome:** Success. CLI output, lint, tests, and build pass after refreshing missing npm optional native dependencies.
 **Insight:** Utility CLIs can live beside the app when they are dependency-free and covered by tests, without changing the browser runtime surface.
 **Promoted to Lessons Learned:** No
+
+---
+
+### [2026-08-03] Repository migration to Random Passwords
+
+**Context:** Replace the Git-transport-disabled `fabian20ro/password-generator` repository with a fresh repository and product name.
+**What happened:** Preserved all 24 live branches in a verified bundle, archived the original repository as `random-passwords-disabled-archive`, published the history to the new `random-passwords` repository, and updated the package name, GitHub Pages base path, workflow links, and visible product title.
+**Outcome:** Success. Lint, all 396 tests, and the production build passed; deployment and GitHub control-plane checks continue outside the source iteration.
+**Insight:** A repository replacement requires both Git ref migration and explicit restoration of GitHub-hosted settings.
+**Promoted to Lessons Learned:** Yes

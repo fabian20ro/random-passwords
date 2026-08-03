@@ -47,6 +47,8 @@ Obsolete lessons → Archive section at bottom (with date and reason). Never del
 
 ## Dependencies & External Services
 
+**[2026-08-03] Fresh GitHub repository migrations need explicit control-plane restoration** — Git history does not carry Pages, Actions permissions, security settings, rulesets, or external webhook credentials. Inventory and restore these separately, then verify the replacement repository has a distinct ID.
+
 <!-- Format: **[YYYY-MM-DD]** Brief title — Explanation -->
 
 ## Process & Workflow

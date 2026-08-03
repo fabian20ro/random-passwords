@@ -1,8 +1,8 @@
-# Password Generator
+# Random Passwords
 
-[![Deploy to GitHub Pages](https://github.com/fabian20ro/password-generator/actions/workflows/deploy.yml/badge.svg)](https://github.com/fabian20ro/password-generator/actions/workflows/deploy.yml)
+[![Deploy to GitHub Pages](https://github.com/fabian20ro/random-passwords/actions/workflows/deploy.yml/badge.svg)](https://github.com/fabian20ro/random-passwords/actions/workflows/deploy.yml)
 
-**[Live Site](https://fabian20ro.github.io/password-generator/)** 
+**[Live Site](https://fabian20ro.github.io/random-passwords/)**
 
 Simple password generator that creates 10 cryptographically secure alphanumeric passwords (23–32 characters).
 

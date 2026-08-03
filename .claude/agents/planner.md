@@ -41,7 +41,7 @@ You produce a plan — you never write code directly.
 - [ ] `npm test` passes
 - [ ] `npm run build` succeeds
 - [ ] CSP not violated (no external scripts/styles)
-- [ ] Vite base path `/password-generator/` preserved
+- [ ] Vite base path `/random-passwords/` preserved
 - [ ] Zero runtime dependencies maintained
 - [ ] Rejection sampling in crypto logic untouched (if applicable)
 

@@ -1,5 +1,5 @@
 {
-  "name": "password-generator",
+  "name": "random-passwords",
   "private": true,
   "type": "module",
   "scripts": {
