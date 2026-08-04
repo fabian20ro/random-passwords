@@ -757,7 +757,48 @@ describe("copyTextToClipboard", () => {
     expect(createElementSpy).not.toHaveBeenCalled(); // rejected before DOM work at size guard line 100-101
     vi.unstubAllGlobals();
   });
-});
+
+  it("returns false when multi-byte emoji text exceeds MAX_CLIPBOARD_TEXT_BYTES in Blob.size (no DOM manipulation)", async () => {
+    const createElementSpy = vi.fn();
+    vi.stubGlobal("document", {
+      createElement: createElementSpy,
+      execCommand: (_cmd: string) => true,
+      body: { appendChild: vi.fn(), removeChild: vi.fn() },
+    });
+
+    // 4-byte emoji × 2560 = 10240 bytes — exactly at the byte limit.
+    // Add one more emoji to push over the strict `>` threshold in Blob.size.
+    const oversized = "🚀".repeat(2561);
+
+    const result = await copyTextToClipboard(undefined, oversized);
+
+    expect(result).toBe(false);
+    expect(createElementSpy).not.toHaveBeenCalled(); // rejected before DOM work at size guard line 100-101
+    vi.unstubAllGlobals();
+  });
+
+  it("returns true for text exactly at MAX_CLIPBOARD_TEXT_BYTES when measured via Blob.size (multi-byte boundary)", async () => {
+    const mockTextarea = {
+      value: "",
+      setAttribute: vi.fn(),
+      style: { position: "", left: "" },
+      select: vi.fn(),
+      setSelectionRange: vi.fn((_start: number, _end: number) => {}),
+    };
+
+    vi.stubGlobal("navigator", { clipboard: {} });
+    vi.stubGlobal("document", createFallbackStub({
+      createElement: () => mockTextarea as unknown as HTMLTextAreaElement,
+    }));
+
+    // Each 🚀 emoji is 4 bytes in UTF-8 (Blob encoding). MAX_CLIPBOARD_TEXT_BYTES / 4 = 2560 reps.
+    // Blob.size for this string equals exactly 10240 — at the `>` threshold, should pass through.
+    const atLimitText = "🚀".repeat(2560);
+
+    await expect(copyTextToClipboard(undefined, atLimitText)).resolves.toBe(true);
+  });
+
+}); // copyTextToClipboard describe block closes here
 
 describe("probeClipboard", () => {
   it("returns true when navigator.clipboard.writeText resolves successfully with empty string", async () => {
