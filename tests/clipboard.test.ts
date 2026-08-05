@@ -798,6 +798,29 @@ describe("copyTextToClipboard", () => {
     await expect(copyTextToClipboard(undefined, atLimitText)).resolves.toBe(true);
   });
 
+  it("falls back to execCommand when writeText throws synchronously (not rejected promise)", async () => {
+    // A synchronous throw from writeText must be caught by the outer try/catch and trigger the legacy path.
+    const mockTextarea = {
+      value: "",
+      setAttribute: vi.fn(),
+      style: { position: "", left: "" },
+      select: vi.fn(),
+      setSelectionRange: vi.fn((_start: number, _end: number) => {}),
+    };
+
+    vi.stubGlobal("document", createFallbackStub({
+      createElement: () => mockTextarea as unknown as HTMLTextAreaElement,
+    }));
+
+    const clipboard = {
+      writeText(): void {
+        throw new Error("sync denied");
+      },
+    } as unknown as Pick<Clipboard, "writeText">;
+
+    await expect(copyTextToClipboard(clipboard, "fallback")).resolves.toBe(true);
+  });
+
 }); // copyTextToClipboard describe block closes here
 
 describe("probeClipboard", () => {
