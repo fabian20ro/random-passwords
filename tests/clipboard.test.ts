@@ -925,6 +925,72 @@ describe("probeClipboard", () => {
 
     expect(result).toBe(false);
   });
+
+  it("returns false when writeText exists but is not callable (string shape)", async () => {
+    vi.stubGlobal("navigator", {
+      clipboard: {
+        writeText: "not-a-function",
+      },
+    });
+
+    const result = await probeClipboard();
+
+    expect(result).toBe(false);
+  });
+
+  it("returns false when writeText exists but is a non-callable object (e.g. getter that returns an object)", async () => {
+    vi.stubGlobal("navigator", {
+      clipboard: {
+        writeText: {}, // present but not callable — should fail the typeof check
+      },
+    });
+
+    const result = await probeClipboard();
+
+    expect(result).toBe(false);
+  });
+
+  it("returns false when clipboard.writeText rejects with a non-Error value mid-probe", async () => {
+    vi.stubGlobal("navigator", {
+      clipboard: {
+        async writeText() {
+          throw 42; // non-Error rejection — should still be caught by probe
+        },
+      },
+    });
+
+    const result = await probeClipboard();
+
+    expect(result).toBe(false);
+  });
+
+  it("returns true when clipboard.writeText resolves with a falsy value (e.g. null) — probe treats resolve as success", async () => {
+    vi.stubGlobal("navigator", {
+      clipboard: {
+        async writeText() {
+          return null; // resolved but falsy — probe succeeds because no throw/reject
+        },
+      },
+    });
+
+    const result = await probeClipboard();
+
+    expect(result).toBe(true);
+  });
+
+  it("returns true when clipboard.writeText resolves with a truthy promise (e.g. the string written)", async () => {
+    vi.stubGlobal("navigator", {
+      clipboard: {
+        async writeText(_text: string) {
+          return _text; // some implementations return what was written
+        },
+      },
+    });
+
+    const result = await probeClipboard();
+
+    expect(result).toBe(true);
+  });
 });
 
 describe("copyTextToClipboard blob size limit", () => {
