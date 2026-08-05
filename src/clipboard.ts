@@ -41,6 +41,13 @@ function fallbackCopy(text: string): boolean {
 export const CLIPBOARD_TIMEOUT_MS = 3000;
 export const MAX_CLIPBOARD_TEXT_BYTES = 10240; // ~10 KiB upper bound for clipboard payloads
 
+let lastCopyLabel: string | undefined;
+
+/** The label from the most recent successful copy, if one was provided. */
+export function getLastCopyLabel(): string | undefined {
+  return lastCopyLabel;
+}
+
 /** Probe: write empty string to Clipboard API, returns false on error/timeout. */
 export async function probeClipboard(timeoutMs = CLIPBOARD_TIMEOUT_MS): Promise<boolean> {
   const api = getClipboardAPI();
@@ -85,10 +92,15 @@ export function canCopyToClipboard(): boolean {
   return false;
 }
 
+export interface CopyResult {
+  success: boolean;
+}
+
 export async function copyTextToClipboard(
   clipboard: Pick<Clipboard, "writeText"> | undefined,
   text: string,
   timeoutMs = CLIPBOARD_TIMEOUT_MS,
+  label?: string,
 ): Promise<boolean> {
   if (typeof text !== "string" || text.trim().length === 0) {
     return false;
@@ -119,6 +131,7 @@ export async function copyTextToClipboard(
           timer = setTimeout(() => reject(new Error("Clipboard API timed out")), timeoutMs);
         }),
       ]);
+      lastCopyLabel = label;
       return true;
     }
   } catch {
@@ -130,6 +143,7 @@ export async function copyTextToClipboard(
 
   // Fall back to legacy execCommand for older browsers / restricted contexts
   if (fallbackCopy(text)) {
+    lastCopyLabel = label;
     return true;
   }
 
