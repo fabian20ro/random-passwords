@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { vi } from "vitest";
-import { canCopyToClipboard, copyTextToClipboard, MAX_CLIPBOARD_TEXT_BYTES, probeClipboard } from "../src/clipboard";
+import { canCopyToClipboard, copyTextToClipboard, getLastCopyLabel, MAX_CLIPBOARD_TEXT_BYTES, CLIPBOARD_TIMEOUT_MS, probeClipboard } from "../src/clipboard";
 
 type FallbackStubOptions = {
   createElement?: (tag: string) => unknown;
@@ -819,6 +819,40 @@ describe("copyTextToClipboard", () => {
     } as unknown as Pick<Clipboard, "writeText">;
 
     await expect(copyTextToClipboard(clipboard, "fallback")).resolves.toBe(true);
+  });
+
+  it("sets lastCopyLabel to the label after a successful modern-API copy", async () => {
+    const clipboard = {
+      async writeText(_text: string) {},
+    } satisfies Pick<Clipboard, "writeText">;
+
+    await copyTextToClipboard(clipboard, "secret", CLIPBOARD_TIMEOUT_MS, "generated");
+
+    expect(getLastCopyLabel()).toBe("generated");
+  });
+
+  it("keeps lastCopyLabel undefined when the modern-API path fails and fallback succeeds with a label", async () => {
+    const mockTextarea = {
+      value: "",
+      setAttribute: vi.fn(),
+      style: { position: "", left: "" },
+      select: vi.fn(),
+      setSelectionRange: vi.fn((_start: number, _end: number) => {}),
+    };
+
+    vi.stubGlobal("document", createFallbackStub({
+      createElement: () => mockTextarea as unknown as HTMLTextAreaElement,
+    }));
+
+    const clipboard = {
+      async writeText(): Promise<void> {
+        throw new Error("denied");
+      },
+    } satisfies Pick<Clipboard, "writeText">;
+
+    await copyTextToClipboard(clipboard, "secret", CLIPBOARD_TIMEOUT_MS, "fallback-label");
+
+    expect(getLastCopyLabel()).toBe("fallback-label");
   });
 
 }); // copyTextToClipboard describe block closes here
