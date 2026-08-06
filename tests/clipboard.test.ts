@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { vi } from "vitest";
-import { canCopyToClipboard, copyTextToClipboard, MAX_CLIPBOARD_TEXT_BYTES, probeClipboard } from "../src/clipboard";
+import { canCopyToClipboard, copyTextToClipboard, getLastCopyLabel, MAX_CLIPBOARD_TEXT_BYTES, CLIPBOARD_TIMEOUT_MS, probeClipboard } from "../src/clipboard";
 
 type FallbackStubOptions = {
   createElement?: (tag: string) => unknown;
@@ -757,7 +757,105 @@ describe("copyTextToClipboard", () => {
     expect(createElementSpy).not.toHaveBeenCalled(); // rejected before DOM work at size guard line 100-101
     vi.unstubAllGlobals();
   });
-});
+
+  it("returns false when multi-byte emoji text exceeds MAX_CLIPBOARD_TEXT_BYTES in Blob.size (no DOM manipulation)", async () => {
+    const createElementSpy = vi.fn();
+    vi.stubGlobal("document", {
+      createElement: createElementSpy,
+      execCommand: (_cmd: string) => true,
+      body: { appendChild: vi.fn(), removeChild: vi.fn() },
+    });
+
+    // 4-byte emoji × 2560 = 10240 bytes — exactly at the byte limit.
+    // Add one more emoji to push over the strict `>` threshold in Blob.size.
+    const oversized = "🚀".repeat(2561);
+
+    const result = await copyTextToClipboard(undefined, oversized);
+
+    expect(result).toBe(false);
+    expect(createElementSpy).not.toHaveBeenCalled(); // rejected before DOM work at size guard line 100-101
+    vi.unstubAllGlobals();
+  });
+
+  it("returns true for text exactly at MAX_CLIPBOARD_TEXT_BYTES when measured via Blob.size (multi-byte boundary)", async () => {
+    const mockTextarea = {
+      value: "",
+      setAttribute: vi.fn(),
+      style: { position: "", left: "" },
+      select: vi.fn(),
+      setSelectionRange: vi.fn((_start: number, _end: number) => {}),
+    };
+
+    vi.stubGlobal("navigator", { clipboard: {} });
+    vi.stubGlobal("document", createFallbackStub({
+      createElement: () => mockTextarea as unknown as HTMLTextAreaElement,
+    }));
+
+    // Each 🚀 emoji is 4 bytes in UTF-8 (Blob encoding). MAX_CLIPBOARD_TEXT_BYTES / 4 = 2560 reps.
+    // Blob.size for this string equals exactly 10240 — at the `>` threshold, should pass through.
+    const atLimitText = "🚀".repeat(2560);
+
+    await expect(copyTextToClipboard(undefined, atLimitText)).resolves.toBe(true);
+  });
+
+  it("falls back to execCommand when writeText throws synchronously (not rejected promise)", async () => {
+    // A synchronous throw from writeText must be caught by the outer try/catch and trigger the legacy path.
+    const mockTextarea = {
+      value: "",
+      setAttribute: vi.fn(),
+      style: { position: "", left: "" },
+      select: vi.fn(),
+      setSelectionRange: vi.fn((_start: number, _end: number) => {}),
+    };
+
+    vi.stubGlobal("document", createFallbackStub({
+      createElement: () => mockTextarea as unknown as HTMLTextAreaElement,
+    }));
+
+    const clipboard = {
+      writeText(): void {
+        throw new Error("sync denied");
+      },
+    } as unknown as Pick<Clipboard, "writeText">;
+
+    await expect(copyTextToClipboard(clipboard, "fallback")).resolves.toBe(true);
+  });
+
+  it("sets lastCopyLabel to the label after a successful modern-API copy", async () => {
+    const clipboard = {
+      async writeText(_text: string) {},
+    } satisfies Pick<Clipboard, "writeText">;
+
+    await copyTextToClipboard(clipboard, "secret", CLIPBOARD_TIMEOUT_MS, "generated");
+
+    expect(getLastCopyLabel()).toBe("generated");
+  });
+
+  it("keeps lastCopyLabel undefined when the modern-API path fails and fallback succeeds with a label", async () => {
+    const mockTextarea = {
+      value: "",
+      setAttribute: vi.fn(),
+      style: { position: "", left: "" },
+      select: vi.fn(),
+      setSelectionRange: vi.fn((_start: number, _end: number) => {}),
+    };
+
+    vi.stubGlobal("document", createFallbackStub({
+      createElement: () => mockTextarea as unknown as HTMLTextAreaElement,
+    }));
+
+    const clipboard = {
+      async writeText(): Promise<void> {
+        throw new Error("denied");
+      },
+    } satisfies Pick<Clipboard, "writeText">;
+
+    await copyTextToClipboard(clipboard, "secret", CLIPBOARD_TIMEOUT_MS, "fallback-label");
+
+    expect(getLastCopyLabel()).toBe("fallback-label");
+  });
+
+}); // copyTextToClipboard describe block closes here
 
 describe("probeClipboard", () => {
   it("returns true when navigator.clipboard.writeText resolves successfully with empty string", async () => {
@@ -860,6 +958,72 @@ describe("probeClipboard", () => {
     const result = await probeClipboard();
 
     expect(result).toBe(false);
+  });
+
+  it("returns false when writeText exists but is not callable (string shape)", async () => {
+    vi.stubGlobal("navigator", {
+      clipboard: {
+        writeText: "not-a-function",
+      },
+    });
+
+    const result = await probeClipboard();
+
+    expect(result).toBe(false);
+  });
+
+  it("returns false when writeText exists but is a non-callable object (e.g. getter that returns an object)", async () => {
+    vi.stubGlobal("navigator", {
+      clipboard: {
+        writeText: {}, // present but not callable — should fail the typeof check
+      },
+    });
+
+    const result = await probeClipboard();
+
+    expect(result).toBe(false);
+  });
+
+  it("returns false when clipboard.writeText rejects with a non-Error value mid-probe", async () => {
+    vi.stubGlobal("navigator", {
+      clipboard: {
+        async writeText() {
+          throw 42; // non-Error rejection — should still be caught by probe
+        },
+      },
+    });
+
+    const result = await probeClipboard();
+
+    expect(result).toBe(false);
+  });
+
+  it("returns true when clipboard.writeText resolves with a falsy value (e.g. null) — probe treats resolve as success", async () => {
+    vi.stubGlobal("navigator", {
+      clipboard: {
+        async writeText() {
+          return null; // resolved but falsy — probe succeeds because no throw/reject
+        },
+      },
+    });
+
+    const result = await probeClipboard();
+
+    expect(result).toBe(true);
+  });
+
+  it("returns true when clipboard.writeText resolves with a truthy promise (e.g. the string written)", async () => {
+    vi.stubGlobal("navigator", {
+      clipboard: {
+        async writeText(_text: string) {
+          return _text; // some implementations return what was written
+        },
+      },
+    });
+
+    const result = await probeClipboard();
+
+    expect(result).toBe(true);
   });
 });
 
