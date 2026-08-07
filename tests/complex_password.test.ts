@@ -507,6 +507,42 @@ describe("getSecureRandomInt", () => {
       });
     });
     describe("rejection sampling during generation", () => {
+      it("must correctly resume sampling after a rejected value at the very start of category picking", () => {
+        // Forces rejection on the FIRST sample (first category pick, max=2) and verifies
+        // the loop resumes cleanly: threshold for max=2 is UINT32_MODULUS-1; only 0xFFFFFFFF
+        // is rejected. After one rejection the next valid value is used to index into ['A','B'].
+        const realCrypto = globalThis.crypto;
+        const samples = [
+          0xFFFFFFFF, // rejected: first pick retries
+          1,          // accepted: index 1%2=1 → 'B' (from ['A','B'])
+          0,          // accepted: index 0%3=0 → 'D' (from ['D','E','F'])
+        ];
+        let sampleIndex = 0;
+        Object.defineProperty(globalThis, "crypto", {
+          configurable: true,
+          writable: true,
+          value: {
+            getRandomValues(array: Uint32Array) {
+              array[0] = samples[sampleIndex++];
+              return array;
+            },
+          },
+        });
+        try {
+          const pw = generateComplexPassword(2, [['A', 'B'], ['D', 'E', 'F']]);
+          expect(pw.length).toBe(2);
+          // Category constraints must still hold after the rejection-retry.
+          expect([...pw].some(c => ['A', 'B'].includes(c))).toBe(true);
+          expect([...pw].some(c => ['D', 'E', 'F'].includes(c))).toBe(true);
+        } finally {
+          Object.defineProperty(globalThis, "crypto", {
+            configurable: true,
+            writable: true,
+            value: realCrypto,
+          });
+        }
+      });
+
       it("must correctly resume sampling after a rejected value mid-password-generation", () => {
         // Forces the rejection-sampling loop in getSecureRandomInt to execute at least once
         // while generateComplexPassword is running, then verifies the resulting password still
