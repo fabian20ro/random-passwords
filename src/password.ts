@@ -222,19 +222,28 @@ export function isValidPassword(pw: string, charset: string): boolean {
   return true;
 }
 
+/** Options for `generateComplexPassword`. */
+export interface ComplexPasswordOptions {
+  /** When true, remove visually ambiguous characters (0/O/l/I/1) from each category's pool. Default: false. */
+  ambiguityFree?: boolean;
+}
+
 /**
  * Generates a cryptographically secure random password that contains at least 
  * one character from each provided category.
  * 
  * @param length: The desired length of the password.
  * @param categories: An array of character sets (e.g., ['ABC', '123']).
+ * @param options: Optional configuration (see ComplexPasswordOptions).
  * @returns The generated password string.
  */
-export function generateComplexPassword(length: number, categories: string[][]): string {
+export function generateComplexPassword(length: number, categories: string[][], options?: ComplexPasswordOptions): string {
   if (!Number.isInteger(length) || length < categories.length || categories.length === 0 || categories.some(c => c.join('').length === 0)) return "";
   if (length > MAX_LENGTH) throw new Error(`Length exceeds maximum allowed: ${MAX_LENGTH}`);
 
-  const charSets = categories.map(c => [...c.join('')]);
+  const charSets = options?.ambiguityFree
+    ? categories.map(c => filterAmbiguousCharset(c.join('')))
+    : categories.map(c => [...c.join('')]);
   const allChars = [...new Set(charSets.flat())];
   if (allChars.length === 0) return "";
 
