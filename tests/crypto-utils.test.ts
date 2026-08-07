@@ -434,4 +434,85 @@ describe("getSecureRandomInt", () => {
       });
     }
   });
+
+  it("rejects buf[0] exactly equal to threshold (>= boundary of rejection zone)", () => {
+    // max=7: range=7, UINT32_MODULUS%7=4, threshold = UINT32_MODULUS - 4.
+    // The while condition is `buf[0] >= threshold`, so exact-threshold values are rejected.
+    const realCrypto = (globalThis as any).crypto;
+    let callCount = 0;
+    Object.defineProperty(globalThis, "crypto", {
+      value: {
+        getRandomValues(arr: Uint32Array) {
+          callCount++;
+          if (callCount === 1) {
+            // first sample lands exactly at threshold — must be rejected by >= comparison
+            arr[0] = UINT32_MODULUS - (UINT32_MODULUS % 7);
+          } else {
+            // second sample accepted — below threshold, deterministic remainder
+            arr[0] = 0x10; // 0x10 % 7 === 1
+          }
+          return arr;
+        },
+      },
+      configurable: true,
+      writable: true,
+    });
+    try {
+      const result = getSecureRandomInt(7);
+      expect(result).toBeGreaterThanOrEqual(0);
+      expect(result).toBeLessThan(7);
+      // 0x10 % 7 === 16 % 7 === 2
+      expect(result).toBe(2);
+      expect(callCount).toBe(2); // one rejection at exact threshold, then accepted
+    } finally {
+      Object.defineProperty(globalThis, "crypto", {
+        value: realCrypto,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
+
+  it("accepts buf[0] just below threshold and rejects one above", () => {
+    // Verifies the >= boundary is tight: exact-threshold rejected, threshold-1 accepted.
+    const realCrypto = (globalThis as any).crypto;
+    let callCount = 0;
+    Object.defineProperty(globalThis, "crypto", {
+      value: {
+        getRandomValues(arr: Uint32Array) {
+          callCount++;
+          const threshold = UINT32_MODULUS - (UINT32_MODULUS % 7);
+          if (callCount === 1) {
+            // exactly at boundary — rejected
+            arr[0] = threshold;
+          } else if (callCount === 2) {
+            // one below boundary — accepted
+            arr[0] = threshold - 1;
+          } else {
+            // safety: should not reach here
+            arr[0] = 0xFFFFFFFF;
+          }
+          return arr;
+        },
+      },
+      configurable: true,
+      writable: true,
+    });
+    try {
+      const result = getSecureRandomInt(7);
+      expect(result).toBeGreaterThanOrEqual(0);
+      expect(result).toBeLessThan(7);
+      // (threshold - 1) % 7 === (UINT32_MODULUS - 5) % 7.
+      // UINT32_MODULUS = 4294967296; 4294967296 % 7 = 4; threshold = 4294967292;
+      // (threshold - 1) = 4294967291; 4294967291 % 7: 7*613566755=4294967285, remainder=6.
+      expect(result).toBe(6);
+      expect(callCount).toBe(2); // rejected at threshold, accepted at threshold-1
+    } finally {
+      Object.defineProperty(globalThis, "crypto", {
+        value: realCrypto,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
 });
