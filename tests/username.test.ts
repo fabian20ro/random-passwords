@@ -78,6 +78,46 @@ describe("username generation", () => {
         expect(USERNAME_NOUNS).toContain(noun.toLowerCase());
       }
     });
+
+    it("generates 2-part usernames when includeNumber=false is passed explicitly to generateUsernames", () => {
+      for (let i = 0; i < 50; i++) {
+        const username = generateUsername(false);
+        expect(username).toMatch(/^[A-Z][a-z]+_[A-Z][a-z]+$/);
+        expect(username.split("_")).toHaveLength(2);
+        expect(username).not.toMatch(/[0-9]{4}$/);
+      }
+    });
+
+    it("generates 2-part usernames from generateUsernames with includeNumber=false", () => {
+      const result = generateUsernames(30, undefined, false);
+      expect(result).toHaveLength(30);
+      for (const u of result) {
+        expect(u).toMatch(/^[A-Z][a-z]+_[A-Z][a-z]+$/);
+        expect(u.split("_")).toHaveLength(2);
+        const [adj, noun] = u.split("_");
+        expect(USERNAME_ADJECTIVES).toContain(adj.toLowerCase());
+        expect(USERNAME_NOUNS).toContain(noun.toLowerCase());
+      }
+    });
+
+    it("generates 3-part usernames from generateUsernames with includeNumber=true", () => {
+      const result = generateUsernames(20, undefined, true);
+      expect(result).toHaveLength(20);
+      for (const u of result) {
+        expect(u).toMatch(/^[A-Z][a-z]+_[A-Z][a-z]+_[0-9]{4}$/);
+        expect(u.split("_")).toHaveLength(3);
+      }
+    });
+
+    it("generates 2-part usernames from generateUsernames without maxAttempts when includeNumber=false", () => {
+      const result = generateUsernames(15, undefined, false);
+      expect(result).toHaveLength(15);
+      for (const u of result) {
+        expect(u).toMatch(/^[A-Z][a-z]+_[A-Z][a-z]+$/);
+        expect(u.split("_")).toHaveLength(2);
+        expect(u).not.toMatch(/[0-9]{4}$/);
+      }
+    });
   });
 
   describe("capitalize()", () => {
