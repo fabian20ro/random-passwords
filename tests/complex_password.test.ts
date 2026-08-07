@@ -622,6 +622,28 @@ describe("getSecureRandomInt", () => {
         const categories = [[], []];
         expect(generateComplexPassword(4, categories)).toBe("");
       });
+
+      it("must coerce object elements via join and produce valid output", () => {
+        // [{}].join('') === "[object Object]" — must not crash; treat as string pool.
+        const categories = [['A'], [{}] as unknown as string[]];
+        for (let i = 0; i < 30; i++) {
+          const pw = generateComplexPassword(4, categories);
+          expect(pw.length).toBe(4);
+          // Cat0 contributes A. Cat1 contributes characters from "[object Object]".
+          expect([...pw]).toContain('A');
+        }
+      });
+
+      it("must handle boolean elements via join coercion", () => {
+        // [true, false].join('') === "truefalse" — must not crash; treat as string pool.
+        const categories = [['A'], [true, false] as unknown as string[]];
+        for (let i = 0; i < 30; i++) {
+          const pw = generateComplexPassword(4, categories);
+          expect(pw.length).toBe(4);
+          // Cat0 contributes A. Cat1 contributes characters from "truefalse".
+          expect([...pw]).toContain('A');
+        }
+      });
     });
 
   });
