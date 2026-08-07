@@ -194,6 +194,31 @@ describe("generatePassword", () => {
     }
   });
 
+  it("returns empty string for zero length", () => {
+    expect(generatePasswordAmbiguityFreeWithSymbols(0)).toBe("");
+  });
+
+  it("returns empty string for negative length", () => {
+    expect(generatePasswordAmbiguityFreeWithSymbols(-5)).toBe("");
+  });
+
+  it("returns empty string for non-integer length", () => {
+    expect(generatePasswordAmbiguityFreeWithSymbols(10.5)).toBe("");
+  });
+
+  it("handles maximum allowed length (65536)", () => {
+    const pw = generatePasswordAmbiguityFreeWithSymbols(65536);
+    expect(pw).toHaveLength(65536);
+    // Verify all characters are valid and ambiguity-free
+    for (const c of pw) {
+      expect(["0", "O", "l", "I", "1"]).not.toContain(c);
+    }
+  });
+
+  it("throws error when length exceeds MAX_LENGTH", () => {
+    expect(() => generatePasswordAmbiguityFreeWithSymbols(70000)).toThrow(/Length exceeds maximum allowed: 65536/);
+  });
+
   it("returns a string of the requested length and contains characters from all categories", () => {
     const categories = [["abc"], ["123"], ["!@#"]];
     const length = 10;

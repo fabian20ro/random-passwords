@@ -831,6 +831,16 @@ describe("copyTextToClipboard", () => {
     expect(getLastCopyLabel()).toBe("generated");
   });
 
+  it("keeps lastCopyLabel undefined when a successful modern-API copy has no label", async () => {
+    const clipboard = {
+      async writeText(_text: string) {},
+    } satisfies Pick<Clipboard, "writeText">;
+
+    await copyTextToClipboard(clipboard, "secret");
+
+    expect(getLastCopyLabel()).toBeUndefined();
+  });
+
   it("keeps lastCopyLabel undefined when the modern-API path fails and fallback succeeds with a label", async () => {
     const mockTextarea = {
       value: "",
