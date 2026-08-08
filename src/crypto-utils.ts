@@ -30,6 +30,7 @@ export function getSecureRandomInt(max: number, min: number = 0): number {
   }
 
   const range = max - min;
+  // Rejection-sampling threshold: reject samples in the top (UINT32_MODULUS % range) uint32 values to avoid modulo bias.
   const threshold = UINT32_MODULUS - (UINT32_MODULUS % range);
 
   let buf: Uint32Array<ArrayBuffer>;
