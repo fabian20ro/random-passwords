@@ -41,6 +41,12 @@ function fallbackCopy(text: string): boolean {
 export const CLIPBOARD_TIMEOUT_MS = 3000;
 export const MAX_CLIPBOARD_TEXT_BYTES = 10240; // ~10 KiB upper bound for clipboard payloads
 
+/** Reason codes returned by copyTextToClipboard's optional failure callback. */
+export type CopyReason = "oversized_text";
+
+/** Sentinel value: the text payload exceeded MAX_CLIPBOARD_TEXT_BYTES. */
+export const OVERSIZED_TEXT: CopyReason = "oversized_text";
+
 let lastCopyLabel: string | undefined;
 
 /** The label from the most recent successful copy, if one was provided. */
