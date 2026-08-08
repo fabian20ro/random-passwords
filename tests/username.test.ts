@@ -118,6 +118,36 @@ describe("username generation", () => {
         expect(u).not.toMatch(/[0-9]{4}$/);
       }
     });
+
+    it("defaults to 3-part usernames when includeNumber is omitted (passes undefined → default true)", () => {
+      // Production contract: generateUsernames passes undefined for includeNumber
+      // which generateUsername's default parameter converts to true.
+      // This test locks in observable API behavior to prevent accidental regression.
+      const result = generateUsernames(20);
+      expect(result).toHaveLength(20);
+      for (const u of result) {
+        expect(u).toMatch(/^[A-Z][a-z]+_[A-Z][a-z]+_[0-9]{4}$/);
+        expect(u.split("_")).toHaveLength(3);
+      }
+    });
+
+    it("defaults to 3-part usernames when only count is provided", () => {
+      // Verifies that omitting both maxAttempts and includeNumber yields 3-part format.
+      const result = generateUsernames(10);
+      expect(result).toHaveLength(10);
+      for (const u of result) {
+        expect(u.split("_")).toHaveLength(3);
+      }
+    });
+
+    it("defaults to 3-part usernames when maxAttempts is provided but includeNumber is omitted", () => {
+      // Verifies that providing maxAttempts without includeNumber still yields 3-part format.
+      const result = generateUsernames(10, 500);
+      expect(result).toHaveLength(10);
+      for (const u of result) {
+        expect(u.split("_")).toHaveLength(3);
+      }
+    });
   });
 
   describe("capitalize()", () => {
