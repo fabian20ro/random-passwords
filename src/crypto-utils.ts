@@ -33,17 +33,12 @@ export function getSecureRandomInt(max: number, min: number = 0): number {
   // Rejection-sampling threshold: reject samples in the top (UINT32_MODULUS % range) uint32 values to avoid modulo bias.
   const threshold = UINT32_MODULUS - (UINT32_MODULUS % range);
 
-  let buf: Uint32Array<ArrayBuffer>;
   const getRandomValues = crypto.bind(globalThis.crypto!);
-  let attempts = 0;
-  do {
-    buf = new Uint32Array(1);
+  for (let attempts = 0; attempts < MAX_ATTEMPTS; attempts++) {
+    const buf = new Uint32Array(1);
     getRandomValues(buf);
-  } while (++attempts < MAX_ATTEMPTS && buf[0] >= threshold);
-
-  if (buf[0] >= threshold) {
-    throw new Error("Rejection sampling exhausted after " + MAX_ATTEMPTS + " attempts");
+    if (buf[0] < threshold) return min + (buf[0] % range);
   }
 
-  return min + (buf[0] % range);
+  throw new Error("Rejection sampling exhausted after " + MAX_ATTEMPTS + " attempts");
 }
