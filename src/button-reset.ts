@@ -61,11 +61,15 @@ export function scheduleButtonReset(
   description?: string,
   onCancel?: () => void,
 ): void {
-  // Validate inputs before side effects — rejecting an invalid reset callback
-  // must not leave orphaned state in any WeakMap. Cancel prior schedule and
-  // attach new metadata only after all guards pass.
+  // Validate inputs before side effects — rejecting an invalid callback or
+  // delayMs must not leave orphaned state in any WeakMap. Cancel prior
+  // schedule only after all guards pass.
   if (typeof reset !== "function") {
     return;
+  }
+
+  if (typeof delayMs === "number" && !Number.isFinite(delayMs) && !Number.isNaN(delayMs)) {
+    throw new TypeError("delayMs must be finite");
   }
 
   cancelButtonReset(target);
@@ -85,13 +89,6 @@ export function scheduleButtonReset(
   // Reject null/undefined AND empty string — an empty description carries no semantic content; silently ignoring it keeps the WeakMap clean.
   if (description !== undefined && description !== "") {
     resetDescriptions.set(target, description);
-  }
-
-  // Coerce null/undefined to the documented default; NaN → clamp to 0.
-  // Reject ±Infinity on raw input BEFORE Math.max(0, x) masks -Infinity as 0.
-  // NaN is permitted — existing contract clamps it to 0 after this guard.
-  if (typeof delayMs === "number" && !Number.isFinite(delayMs) && !Number.isNaN(delayMs)) {
-    throw new TypeError("delayMs must be finite");
   }
 
   const effectiveDelay = (delayMs === null || delayMs === undefined)
