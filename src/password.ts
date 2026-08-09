@@ -247,6 +247,12 @@ export function generateComplexPassword(length: number, categories: string[][], 
   const allChars = [...new Set(charSets.flat())];
   if (allChars.length === 0) return "";
 
+  // Guard: reject any category that becomes empty after ambiguity filtering.
+  // Without this, getSecureRandomInt(category.length) would throw when length=0.
+  for (const cat of charSets) {
+    if (cat.length === 0) return "";
+  }
+
   // 1. Pick one from each category
   const passwordChars: string[] = [];
   for (const category of charSets) {
