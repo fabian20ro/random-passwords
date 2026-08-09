@@ -158,8 +158,9 @@ export interface GenerateAllOptions {
  * with characters from the required classes, guaranteeing diversity at fallback time.
  * Tracks "index:classIndex" slots to prevent cross-class overwrite of already-injected positions.
  */
-function injectMissingClasses(length: number, minClasses: number): string {
-  const chars = Array.from(generatePassword(length));
+function injectMissingClasses(length: number, minClasses: number, ambiguityFree?: boolean): string {
+  const generator = ambiguityFree ? generatePasswordAmbiguityFree : generatePassword;
+  const chars = Array.from(generator(length));
   const neededSets = CLASS_SETS.slice(0, minClasses).filter(set => !setHasChar(set, chars.join('')));
   const usedSlots = new Set<string>();
   for (let i = 0; i < neededSets.length && i < length; i++) {
