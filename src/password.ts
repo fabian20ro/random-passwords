@@ -35,6 +35,7 @@ const AMBIGUITY_FREE_SYMBOLS_CHARSET = AMBIGUITY_FREE_CHARSET + SYMBOLS;
  * @returns The generated password string, or empty string if charset is exhausted.
  */
 export function generatePasswordAmbiguityFree(length: number): string {
+  if (!Number.isInteger(length) || length <= 0) return "";
   if (AMBIGUITY_FREE_CHARSET.length === 0) return "";
   return generatePasswordWithCharset(length, AMBIGUITY_FREE_CHARSET);
 }
@@ -107,7 +108,7 @@ export function generatePasswordWithNumbersOnly(length: number): string {
  * @returns The generated password string.
  */
 export function generatePasswordWithCharset(length: number, charset: string): string {
-  if (!Number.isInteger(length) || length <= 0 || !charset) return "";
+  if (!Number.isInteger(length) || length <= 0 || typeof charset !== "string" || !charset) return "";
   if (length > MAX_LENGTH) throw new Error(`Length exceeds maximum allowed: ${MAX_LENGTH}`);
   const chars = Array.from(new Set(charset));
   if (chars.length === 0) return "";

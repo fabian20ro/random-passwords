@@ -44,16 +44,26 @@ export function randomFourDigitNumber(): number {
 
 const MAX_USERNAME_COUNT = 1024;
 
+/**
+ * Validates and clamps maxAttempts to the allowed range.
+ * Throws RangeError for invalid values, returns bounded integer otherwise.
+ */
+function validateAndClampMaxAttempts(maxAttempts: number | undefined): number {
+  if (maxAttempts === undefined) return Math.min(MAX_USERNAME_COUNT * 16, MAX_USERNAME_COUNT * 64);
+
+  if (!Number.isInteger(maxAttempts) || maxAttempts <= 0) {
+    throw new RangeError(`Invalid maxAttempts: ${maxAttempts}. Must be a positive integer.`);
+  }
+
+  return Math.min(maxAttempts, MAX_USERNAME_COUNT * 64);
+}
+
 export function generateUsernames(count: number, maxAttempts?: number, includeNumber?: boolean): string[] {
   // Validate inputs upfront — non-positive or non-integer maxAttempts is a programmer error.
   if (!Number.isInteger(count) || count < 0 || count > MAX_USERNAME_COUNT) {
     throw new RangeError(`Invalid username count: ${count}. Must be between 0 and ${MAX_USERNAME_COUNT}.`);
   }
-  const effectiveMax = maxAttempts !== undefined ? (
-    !Number.isInteger(maxAttempts) || maxAttempts <= 0
-      ? (() => { throw new RangeError(`Invalid maxAttempts: ${maxAttempts}. Must be a positive integer.`); })()
-      : Math.min(maxAttempts, MAX_USERNAME_COUNT * 64)
-  ) : Math.min(MAX_USERNAME_COUNT * 16, MAX_USERNAME_COUNT * 64);
+  const effectiveMax = validateAndClampMaxAttempts(maxAttempts);
   // Zero-count fast path — avoid unnecessary allocation of Set/Array.
   if (count === 0) return [];
   const seen = new Set<string>();
