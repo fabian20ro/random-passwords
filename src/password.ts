@@ -107,7 +107,7 @@ export function generatePasswordWithNumbersOnly(length: number): string {
  * @returns The generated password string.
  */
 export function generatePasswordWithCharset(length: number, charset: string): string {
-  if (!Number.isInteger(length) || length <= 0 || !charset) return "";
+  if (!Number.isInteger(length) || length <= 0 || typeof charset !== "string" || !charset) return "";
   if (length > MAX_LENGTH) throw new Error(`Length exceeds maximum allowed: ${MAX_LENGTH}`);
   const chars = Array.from(new Set(charset));
   if (chars.length === 0) return "";
