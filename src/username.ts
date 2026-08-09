@@ -49,7 +49,7 @@ const MAX_USERNAME_COUNT = 1024;
  * Throws RangeError for invalid values, returns bounded integer otherwise.
  */
 function validateAndClampMaxAttempts(maxAttempts: number | undefined): number {
-  if (maxAttempts === undefined) return Math.min(MAX_USERNAME_COUNT * 16, MAX_USERNAME_COUNT * 64);
+  if (maxAttempts === undefined) return Infinity;
 
   if (!Number.isInteger(maxAttempts) || maxAttempts <= 0) {
     throw new RangeError(`Invalid maxAttempts: ${maxAttempts}. Must be a positive integer.`);
