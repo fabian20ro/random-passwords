@@ -98,10 +98,6 @@ export function canCopyToClipboard(): boolean {
   return false;
 }
 
-export interface CopyResult {
-  success: boolean;
-}
-
 export async function copyTextToClipboard(
   clipboard: Pick<Clipboard, "writeText"> | undefined,
   text: string,
