@@ -4,7 +4,7 @@ function fallbackCopy(text: string): boolean {
     return false;
   }
 
-  // Guard against document.body being null/undefined during early DOM lifecycle.
+  // Short-circuit when no document body — fallback cannot mount a textarea.
   if (!document.body) {
     return false;
   }
