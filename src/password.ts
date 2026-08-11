@@ -196,7 +196,7 @@ export function generateAll(count: number = 1, options?: GenerateAllOptions): st
       if (countDistinctClasses(pw) >= minClasses) return pw;
     }
     // Fallback: guarantee diversity by injecting missing-class characters.
-    return injectMissingClasses(length, minClasses);
+    return injectMissingClasses(length, minClasses, options?.ambiguityFree);
   }
 
   const result: string[] = [];
