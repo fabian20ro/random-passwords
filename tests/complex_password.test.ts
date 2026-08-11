@@ -180,6 +180,50 @@ describe("getSecureRandomInt", () => {
         }
       });
 
+      it("must use the full deduplicated union for extras sampling with overlapping categories (deterministic mock)", () => {
+        // With 2 overlapping categories [['A','B','X'],['X','C']], length=4 →
+        // 2 picks + 2 extras from deduped union {A,B,X,C} (size 4).
+        // Shuffle runs i=3..1 (3 swaps). Total random calls: 2+2+3 = 7.
+        const realCrypto = globalThis.crypto;
+        const samples = [
+          0, // step1: cat0 picks index 0 → 'A'
+          1, // step1: cat1 picks index 1 → 'C' (from ['X','C'])
+          2, // step2: extra[0] from union {A,B,X,C}: index 2%4=2 → 'X'
+          3, // step2: extra[1]: index 3%4=3 → 'C'
+          2, // step3: shuffle i=3 j=rand(4)=2 → swap [3]↔[2]
+          0, // step3: shuffle i=2 j=rand(3)=0 → swap [2]↔[0]
+          1, // step3: shuffle i=1 j=rand(2)=1 → no-op swap
+        ];
+        let sampleIndex = 0;
+        Object.defineProperty(globalThis, "crypto", {
+          configurable: true,
+          writable: true,
+          value: {
+            getRandomValues(array: Uint32Array) {
+              array[0] = samples[sampleIndex++];
+              return array;
+            },
+          },
+        });
+        try {
+          const pw = generateComplexPassword(4, [['A', 'B', 'X'], ['X', 'C']]);
+          expect(pw.length).toBe(4);
+          // All chars must come from the deduplicated union.
+          const allowed = new Set(['A', 'B', 'X', 'C']);
+          for (const c of pw) expect(allowed.has(c)).toBe(true);
+          // Category constraints satisfied after shuffle.
+          expect([...pw].some(c => ['A', 'B', 'X'].includes(c))).toBe(true);
+          expect([...pw].some(c => ['X', 'C'].includes(c))).toBe(true);
+          expect(sampleIndex).toBe(samples.length);
+        } finally {
+          Object.defineProperty(globalThis, "crypto", {
+            configurable: true,
+            writable: true,
+            value: realCrypto,
+          });
+        }
+      });
+
       it("must include one char from each category when overlap is complete", () => {
         // Category 1 is a subset of category 0 — every char in cat1 also satisfies cat0.
         const categories = [['A', 'B', 'C'], ['A']];
