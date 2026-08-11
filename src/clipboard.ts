@@ -48,10 +48,16 @@ export type CopyReason = "oversized_text";
 export const OVERSIZED_TEXT: CopyReason = "oversized_text";
 
 let lastCopyLabel: string | undefined;
+let lastCopyAtMs: number | undefined;
 
 /** The label from the most recent successful copy, if one was provided. */
 export function getLastCopyLabel(): string | undefined {
   return lastCopyLabel;
+}
+
+/** Millisecond timestamp of the most recent successful copy, or undefined. */
+export function getLastCopyAt(): number | undefined {
+  return lastCopyAtMs;
 }
 
 /** Probe: write empty string to Clipboard API, returns false on error/timeout. */
