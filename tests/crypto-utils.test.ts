@@ -515,4 +515,78 @@ describe("getSecureRandomInt", () => {
       });
     }
   });
+
+  it("rejects exactly UINT32_MODULUS%range top values (rejection zone width structural invariant)", () => {
+    // max=7: range=7, rejection-zone width = UINT32_MODULUS % 7 = 4.
+    // Values in [threshold, threshold+4) are all rejected; any below is accepted.
+    const realCrypto = (globalThis as any).crypto;
+    let callCount = 0;
+    const range = 7;
+    const rejectionWidth = UINT32_MODULUS % range; // = 4 for max=7
+    const threshold = UINT32_MODULUS - rejectionWidth;
+    Object.defineProperty(globalThis, "crypto", {
+      value: {
+        getRandomValues(arr: Uint32Array) {
+          callCount++;
+          if (callCount <= rejectionWidth) {
+            // Each of the N values in [threshold, threshold+rejectionWidth) must be rejected.
+            arr[0] = threshold + (callCount - 1);
+          } else {
+            // First accepted sample — well below threshold.
+            arr[0] = 0x42;
+          }
+          return arr;
+        },
+      },
+      configurable: true,
+      writable: true,
+    });
+    try {
+      const result = getSecureRandomInt(range);
+      expect(result).toBeGreaterThanOrEqual(0);
+      expect(result).toBeLessThan(range);
+      // 0x42 % 7 === 66 % 7 === 3
+      expect(result).toBe(3);
+      expect(callCount).toBe(rejectionWidth + 1); // rejection zone exhausted, then one accepted
+    } finally {
+      Object.defineProperty(globalThis, "crypto", {
+        value: realCrypto,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
+
+  it("rejects all N values in the rejection zone for any range (not just max=7)", () => {
+    // Stress test with different ranges to confirm the structural invariant holds.
+    const realCrypto = (globalThis as any).crypto;
+    let callCount = 0;
+    for (const range of [3, 5, 13, 256]) {
+      const rejectionWidth = UINT32_MODULUS % range;
+      if (rejectionWidth === 0) continue; // no rejection zone — skip
+      const threshold = UINT32_MODULUS - rejectionWidth;
+      callCount = 0;
+      Object.defineProperty(globalThis, "crypto", {
+        value: {
+          getRandomValues(arr: Uint32Array) {
+            callCount++;
+            if (callCount <= rejectionWidth) {
+              arr[0] = threshold + (callCount - 1); // each in the zone
+            } else {
+              arr[0] = 0x1; // first valid sample
+            }
+            return arr;
+          },
+        },
+        configurable: true,
+        writable: true,
+      });
+      const result = getSecureRandomInt(range);
+      expect(result).toBeGreaterThanOrEqual(0);
+      expect(result).toBeLessThan(range);
+      // 1 % range === 1 for any range > 1 (all ranges here are >1)
+      expect(result).toBe(1);
+      expect(callCount).toBe(rejectionWidth + 1);
+    }
+  });
 });

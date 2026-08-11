@@ -16,7 +16,7 @@ export function getSecureRandomInt(max: number, min: number = 0): number {
     throw new Error("Max must be between 1 and UINT32_MODULUS");
   }
 
-  if (!Number.isInteger(min) || min < 0) {
+  if (min < 0 || !Number.isFinite(min) || !Number.isInteger(min)) {
     throw new Error("Min must be a non-negative integer");
   }
 

@@ -130,6 +130,16 @@ const MAX_DIVERSITY_RETRIES = 20;
 /** Precomputed class Sets — allocated once at module load, reused per call. */
 const CLASS_SETS = [new Set(CHAR_CLASS_UPPER), new Set(CHAR_CLASS_LOWER), new Set(CHAR_CLASS_DIGIT)];
 
+/** Precomputed ambiguity-free class subsets for fallback injection when ambiguityFree=true. */
+function makeAmbiguityFreeClassSet(charset: string): Set<string> {
+  return new Set([...charset].filter(c => !AMBIGUOUS_CHARS.has(c)));
+}
+const AMBIGUITY_FREE_CLASS_SETS = [
+  makeAmbiguityFreeClassSet(CHAR_CLASS_UPPER),
+  makeAmbiguityFreeClassSet(CHAR_CLASS_LOWER),
+  makeAmbiguityFreeClassSet(CHAR_CLASS_DIGIT),
+];
+
 function setHasChar(set: Set<string>, pw: string): boolean {
   for (let i = 0; i < pw.length; i++) if (set.has(pw[i])) return true;
   return false;
@@ -161,7 +171,8 @@ export interface GenerateAllOptions {
 function injectMissingClasses(length: number, minClasses: number, ambiguityFree?: boolean): string {
   const generator = ambiguityFree ? generatePasswordAmbiguityFree : generatePassword;
   const chars = Array.from(generator(length));
-  const neededSets = CLASS_SETS.slice(0, minClasses).filter(set => !setHasChar(set, chars.join('')));
+  const classSets = ambiguityFree ? AMBIGUITY_FREE_CLASS_SETS : CLASS_SETS;
+  const neededSets = classSets.slice(0, minClasses).filter(set => !setHasChar(set, chars.join('')));
   const usedSlots = new Set<string>();
   for (let i = 0; i < neededSets.length && i < length; i++) {
     const set = neededSets[i];
