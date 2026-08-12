@@ -25,8 +25,8 @@ export function cancelButtonReset(target: object): boolean {
     const hook = resetCancelHooks.get(target);
     if (typeof hook === "function") {
       try { hook(); } catch { /* hook errors must not abort cancellation */ }
-      resetCancelHooks.delete(target);
     }
+    resetCancelHooks.delete(target);
     resetDescriptions.delete(target);
     return true;
   }
