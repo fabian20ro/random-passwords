@@ -246,7 +246,7 @@ export interface ComplexPasswordOptions {
  * one character from each provided category.
  * 
  * @param length: The desired length of the password.
- * @param categories: An array of character sets (e.g., ['ABC', '123']).
+ * @param categories: An array of character arrays, one per required class (e.g., [['A','B','C'], ['1','2','3']]).
  * @param options: Optional configuration (see ComplexPasswordOptions).
  * @returns The generated password string.
  */
