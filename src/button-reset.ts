@@ -61,12 +61,7 @@ export function scheduleButtonReset(
   description?: string,
   onCancel?: () => void,
 ): void {
-  // Validate inputs before side effects — rejecting an invalid callback or
-  // delayMs must not leave orphaned state in any WeakMap. Cancel prior
-  // schedule only after all guards pass.
-  if (typeof reset !== "function") {
-    return;
-  }
+  if (typeof reset !== "function") return;
 
   if (typeof delayMs === "number" && !Number.isFinite(delayMs) && !Number.isNaN(delayMs)) {
     throw new TypeError("delayMs must be finite");
@@ -74,19 +69,12 @@ export function scheduleButtonReset(
 
   cancelButtonReset(target);
 
-  // If this schedule has a cancel hook, attach it — it fires when the pending
-  // timeout is cancelled (rescheduled or explicitly cleared). Stored after the
-  // clear so it does not fire on its own cancellation.
+  // Cancel hook set AFTER the clear so it does not fire on its own cancellation.
   if (typeof onCancel === "function") {
     resetCancelHooks.set(target, onCancel);
   }
 
-  // Attach the semantic description alongside the timeout identity so callers
-  // can introspect what is pending at any time. Replacing a prior schedule also
-  // replaces its description; cancelling clears it entirely. Set after all
-  // validations pass — failed schedules must not leak orphaned descriptions into
-  // the WeakMap, which would otherwise confuse callers of getResetDescription().
-  // Reject null/undefined AND empty string — an empty description carries no semantic content; silently ignoring it keeps the WeakMap clean.
+  // Empty descriptions carry no semantic content — skip to keep WeakMap clean.
   if (description !== undefined && description !== "") {
     resetDescriptions.set(target, description);
   }
@@ -98,7 +86,6 @@ export function scheduleButtonReset(
   const timeoutId = setTimeout(() => {
     if (resetTimeouts.get(target) === timeoutId) {
       resetTimeouts.delete(target);
-      // Clean up parallel WeakMaps so stale entries don't leak.
       resetCancelHooks.delete(target);
       resetDescriptions.delete(target);
       reset();
