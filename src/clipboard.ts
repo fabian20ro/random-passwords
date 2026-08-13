@@ -140,6 +140,7 @@ export async function copyTextToClipboard(
         }),
       ]);
       lastCopyLabel = label;
+      lastCopyAtMs = Date.now();
       return true;
     }
   } catch {
