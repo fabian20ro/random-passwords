@@ -61,6 +61,9 @@ export function scheduleButtonReset(
   description?: string,
   onCancel?: () => void,
 ): void {
+  // Validate target before any other checks — fail-fast on programming errors.
+  if (!(target instanceof Object)) throw new TypeError("cancelButtonReset requires an object target");
+
   if (typeof reset !== "function") return;
 
   if (typeof delayMs === "number" && !Number.isFinite(delayMs) && !Number.isNaN(delayMs)) {
