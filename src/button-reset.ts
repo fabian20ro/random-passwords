@@ -64,11 +64,13 @@ export function scheduleButtonReset(
   // Validate target before any other checks — fail-fast on programming errors.
   if (!(target instanceof Object)) throw new TypeError("cancelButtonReset requires an object target");
 
-  if (typeof reset !== "function") return;
-
+  // Validate ALL parameters before any early-exit — an invalid reset must not
+  // mask a subsequent undefined/Infinity delay from triggering its guard.
   if (typeof delayMs === "number" && !Number.isFinite(delayMs) && !Number.isNaN(delayMs)) {
     throw new TypeError("delayMs must be finite");
   }
+
+  if (typeof reset !== "function") return;
 
   cancelButtonReset(target);
 
