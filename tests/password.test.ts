@@ -674,6 +674,37 @@ describe("generateComplexPassword", () => {
     expect(pw).toHaveLength(1);
     restoreCryptoMock();
   });
+
+  it("returns empty string when ambiguityFree=true leaves a category with no unambiguous chars", () => {
+    // Category ["0","O"] contains only ambiguous characters — after filtering both vanish,
+    // and the guard at line 265-267 must return "" without throwing.
+    const categories = [["0", "O"], ["abc"]];
+    const pw = generateComplexPassword(10, categories, { ambiguityFree: true });
+    expect(pw).toBe("");
+  });
+
+  it("produces only non-ambiguous characters when ambiguityFree=true with overlapping categories", () => {
+    // Categories contain both ambiguous and unambiguous chars — ambiguity-free filtering must strip them.
+    const categories = [["a", "0", "O"], ["b", "1", "I"]];
+    for (let i = 0; i < 200; i++) {
+      const pw = generateComplexPassword(20, categories, { ambiguityFree: true });
+      expect(pw).toHaveLength(20);
+      // No ambiguous characters allowed in output when ambiguityFree=true
+      expect([...pw].every(c => !["0", "O", "l", "I", "1"].includes(c))).toBe(true);
+    }
+  });
+
+  it("still requires category coverage when ambiguityFree is enabled", () => {
+    // ambiguityFree modifies character pools but must not weaken the guarantee that each category contributes a pick.
+    const categories = [["a"], ["b"]];
+    for (let i = 0; i < 100; i++) {
+      const pw = generateComplexPassword(6, categories, { ambiguityFree: true });
+      expect(pw).toHaveLength(6);
+      // Both category picks must still be present
+      expect([...pw].includes("a")).toBe(true);
+      expect([...pw].includes("b")).toBe(true);
+    }
+  });
 });
 
 describe("generatePasswordAmbiguityFree", () => {
