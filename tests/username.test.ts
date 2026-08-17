@@ -294,6 +294,52 @@ describe("username generation", () => {
       expect(() => generateUsernames(5, null as never)).toThrow(RangeError);
     });
 
+    it("throws for Infinity and -Infinity count", () => {
+      // Number.isInteger(±Infinity) is false — must not bypass validation.
+      expect(() => generateUsernames(Infinity)).toThrow(RangeError);
+      expect(() => generateUsernames(-Infinity)).toThrow(RangeError);
+    });
+
+    it("clamps maxAttempts above the ceiling to 65536 without error", () => {
+      // validateAndClampMaxAttempts caps at MAX_USERNAME_COUNT * 64 = 65536.
+      const result = generateUsernames(10, Number.MAX_SAFE_INTEGER);
+      expect(result).toHaveLength(10);
+    });
+
+    it("accepts the exact ceiling value (65536) for maxAttempts", () => {
+      // Boundary: at the clamp ceiling, validation passes and generation proceeds.
+      const result = generateUsernames(5, 65536);
+      expect(result).toHaveLength(5);
+      for (const u of result) {
+        expect(u).toMatch(/^[A-Z][a-z]+_[A-Z][a-z]+_[0-9]{4}$/);
+      }
+    });
+
+    it("accepts 1 as a valid maxAttempts value", () => {
+      // min positive integer — must succeed for count=1.
+      const result = generateUsernames(1, 1);
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatch(/^[A-Z][a-z]+_[A-Z][a-z]+_[0-9]{4}$/);
+    });
+
+    it("generates 2-part usernames with valid maxAttempts and includeNumber=false", () => {
+      const result = generateUsernames(10, 5000, false);
+      expect(result).toHaveLength(10);
+      for (const u of result) {
+        expect(u).toMatch(/^[A-Z][a-z]+_[A-Z][a-z]+$/);
+        expect(u.split("_")).toHaveLength(2);
+      }
+    });
+
+    it("preserves includeNumber=false through generateUsernames with all parameters", () => {
+      // Full parameter path: count + maxAttempts + includeNumber.
+      const result = generateUsernames(5, 1000, false);
+      expect(result).toHaveLength(5);
+      for (const u of result) {
+        expect(u).not.toMatch(/[0-9]{4}$/);
+      }
+    });
+
     it("throws for non-positive integer maxAttempts", () => {
       expect(() => generateUsernames(5, -1)).toThrow(RangeError);
       expect(() => generateUsernames(5, -999)).toThrow(RangeError);
