@@ -29,9 +29,11 @@ function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-export function generateUsername(includeNumber: boolean = true): string {
-  const adj = capitalize(USERNAME_ADJECTIVES[getSecureRandomInt(USERNAME_ADJECTIVES.length)]);
-  const noun = capitalize(USERNAME_NOUNS[getSecureRandomInt(USERNAME_NOUNS.length)]);
+export function generateUsername(includeNumber: boolean = true, lowercase: boolean = false): string {
+  const adjRaw = USERNAME_ADJECTIVES[getSecureRandomInt(USERNAME_ADJECTIVES.length)];
+  const nounRaw = USERNAME_NOUNS[getSecureRandomInt(USERNAME_NOUNS.length)];
+  const adj = lowercase ? adjRaw : capitalize(adjRaw);
+  const noun = lowercase ? nounRaw : capitalize(nounRaw);
   return includeNumber ? `${adj}_${noun}_${randomFourDigitNumber()}` : `${adj}_${noun}`;
 }
 
