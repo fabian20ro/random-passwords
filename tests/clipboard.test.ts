@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { vi } from "vitest";
-import { canCopyToClipboard, copyTextToClipboard, getLastCopyLabel, MAX_CLIPBOARD_TEXT_BYTES, CLIPBOARD_TIMEOUT_MS, probeClipboard } from "../src/clipboard";
+import { canCopyToClipboard, copyTextToClipboard, getLastCopyLabel, getLastCopyAt, MAX_CLIPBOARD_TEXT_BYTES, CLIPBOARD_TIMEOUT_MS, probeClipboard } from "../src/clipboard";
 
 type FallbackStubOptions = {
   createElement?: (tag: string) => unknown;
@@ -863,6 +863,48 @@ describe("copyTextToClipboard", () => {
     await copyTextToClipboard(clipboard, "secret", CLIPBOARD_TIMEOUT_MS, "fallback-label");
 
     expect(getLastCopyLabel()).toBe("fallback-label");
+  });
+
+  it("sets lastCopyAt to a recent timestamp after successful modern-API copy", async () => {
+    const clipboard = {
+      async writeText(_text: string) {},
+    } satisfies Pick<Clipboard, "writeText">;
+
+    const before = Date.now();
+    await copyTextToClipboard(clipboard, "secret");
+    const atMs = getLastCopyAt()!;
+
+    expect(typeof atMs).toBe("number");
+    expect(atMs).toBeGreaterThanOrEqual(before);
+    expect(atMs).toBeLessThanOrEqual(Date.now());
+  });
+
+  it("sets lastCopyAt after successful execCommand fallback", async () => {
+    const mockTextarea = {
+      value: "",
+      setAttribute: vi.fn(),
+      style: { position: "", left: "" },
+      select: vi.fn(),
+      setSelectionRange: vi.fn((_start: number, _end: number) => {}),
+    };
+
+    vi.stubGlobal("document", createFallbackStub({
+      createElement: () => mockTextarea as unknown as HTMLTextAreaElement,
+    }));
+
+    const before = Date.now();
+    const clipboard = {
+      async writeText(): Promise<void> {
+        throw new Error("denied");
+      },
+    } satisfies Pick<Clipboard, "writeText">;
+
+    await copyTextToClipboard(clipboard, "fallback-secret");
+    const atMs = getLastCopyAt()!;
+
+    expect(typeof atMs).toBe("number");
+    expect(atMs).toBeGreaterThanOrEqual(before);
+    expect(atMs).toBeLessThanOrEqual(Date.now());
   });
 
 }); // copyTextToClipboard describe block closes here
