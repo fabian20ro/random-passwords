@@ -61,7 +61,7 @@ function validateAndClampMaxAttempts(maxAttempts: number | undefined): number {
   return Math.min(maxAttempts, MAX_USERNAME_COUNT * 64);
 }
 
-export function generateUsernames(count: number, maxAttempts?: number, includeNumber?: boolean): string[] {
+export function generateUsernames(count: number, maxAttempts?: number, includeNumber?: boolean, lowercase?: boolean): string[] {
   // Validate inputs upfront — non-positive or non-integer maxAttempts is a programmer error.
   if (!Number.isInteger(count) || count < 0 || count > MAX_USERNAME_COUNT) {
     throw new RangeError(`Invalid username count: ${count}. Must be between 0 and ${MAX_USERNAME_COUNT}.`);
@@ -73,16 +73,20 @@ export function generateUsernames(count: number, maxAttempts?: number, includeNu
   const result: string[] = [];
   let attempts = 0;
   while (result.length < count && attempts < effectiveMax) {
-    const username = generateUsername(includeNumber);
+    const username = generateUsername(includeNumber, lowercase);
     if (!seen.has(username)) {
       seen.add(username);
       result.push(username);
     }
     attempts++;
   }
-  // Observable failure: exhaustion with zero results is a real bug, not an empty array.
+  // Exhaustion guard: if no unique usernames were generated at all after
+  // exhausting attempts, that signals a real bug — not a soft empty result.
+  // Otherwise return partial results (already handled by the loop).
   if (result.length === 0) {
     throw new Error(`Exhausted ${effectiveMax} attempts without generating any unique username.`);
   }
+
+  return result;
   return result;
 }
