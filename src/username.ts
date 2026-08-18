@@ -80,9 +80,13 @@ export function generateUsernames(count: number, maxAttempts?: number, includeNu
     }
     attempts++;
   }
-  // Observable failure: exhaustion with zero results is a real bug, not an empty array.
+  // Exhaustion guard: if no unique usernames were generated at all after
+  // exhausting attempts, that signals a real bug — not a soft empty result.
+  // Otherwise return partial results (already handled by the loop).
   if (result.length === 0) {
     throw new Error(`Exhausted ${effectiveMax} attempts without generating any unique username.`);
   }
+
+  return result;
   return result;
 }
