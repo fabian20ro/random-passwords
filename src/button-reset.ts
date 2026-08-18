@@ -11,11 +11,17 @@ export const DEFAULT_RESET_DELAY_MS = 300;
 
 export { resetTimeouts, resetDescriptions };
 
+/** Reject a non-object `target` with the documented TypeError — used by callers
+ *  that require a real object (e.g. `scheduleButtonReset`). */
+function assertObjectTarget(target: unknown): void {
+  if (!(target instanceof Object)) throw new TypeError("cancelButtonReset requires an object target");
+}
+
 /** Cancel any pending reset for the given target. Returns true if a scheduled
  *  timeout was actually cleared, false if nothing was pending (no-op). No-op
  *  targets do NOT throw; they just report their empty state via return value. */
 export function cancelButtonReset(target: object): boolean {
-  if (!(target instanceof Object)) throw new TypeError("cancelButtonReset requires an object target");
+  assertObjectTarget(target);
   const timeoutId = resetTimeouts.get(target);
   if (timeoutId !== undefined) {
     clearTimeout(timeoutId);
