@@ -153,6 +153,7 @@ export async function copyTextToClipboard(
   // Fall back to legacy execCommand for older browsers / restricted contexts
   if (fallbackCopy(text)) {
     lastCopyLabel = label;
+    lastCopyAtMs = Date.now();
     return true;
   }
 
