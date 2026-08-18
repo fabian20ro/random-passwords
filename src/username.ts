@@ -32,9 +32,10 @@ function capitalize(s: string): string {
 export function generateUsername(includeNumber: boolean = true, lowercase: boolean = false): string {
   const adjRaw = USERNAME_ADJECTIVES[getSecureRandomInt(USERNAME_ADJECTIVES.length)];
   const nounRaw = USERNAME_NOUNS[getSecureRandomInt(USERNAME_NOUNS.length)];
+  const number = randomFourDigitNumber();
   const adj = lowercase ? adjRaw : capitalize(adjRaw);
   const noun = lowercase ? nounRaw : capitalize(nounRaw);
-  return includeNumber ? `${adj}_${noun}_${randomFourDigitNumber()}` : `${adj}_${noun}`;
+  return includeNumber ? `${adj}_${noun}_${number}` : `${adj}_${noun}`;
 }
 
 export { capitalize };

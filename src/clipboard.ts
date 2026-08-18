@@ -132,7 +132,7 @@ export async function copyTextToClipboard(
 
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    if (clipboard && typeof clipboard.writeText === "function") {
+    if (clipboard) {
       await Promise.race([
         clipboard.writeText(text),
         new Promise<never>((_, reject) => {
