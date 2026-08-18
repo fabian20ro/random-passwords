@@ -61,7 +61,7 @@ function validateAndClampMaxAttempts(maxAttempts: number | undefined): number {
   return Math.min(maxAttempts, MAX_USERNAME_COUNT * 64);
 }
 
-export function generateUsernames(count: number, maxAttempts?: number, includeNumber?: boolean): string[] {
+export function generateUsernames(count: number, maxAttempts?: number, includeNumber?: boolean, lowercase?: boolean): string[] {
   // Validate inputs upfront — non-positive or non-integer maxAttempts is a programmer error.
   if (!Number.isInteger(count) || count < 0 || count > MAX_USERNAME_COUNT) {
     throw new RangeError(`Invalid username count: ${count}. Must be between 0 and ${MAX_USERNAME_COUNT}.`);
@@ -73,7 +73,7 @@ export function generateUsernames(count: number, maxAttempts?: number, includeNu
   const result: string[] = [];
   let attempts = 0;
   while (result.length < count && attempts < effectiveMax) {
-    const username = generateUsername(includeNumber);
+    const username = generateUsername(includeNumber, lowercase);
     if (!seen.has(username)) {
       seen.add(username);
       result.push(username);
