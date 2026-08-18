@@ -25,7 +25,7 @@ export function getSecureRandomInt(max: number, min: number = 0): number {
   }
 
   const crypto = globalThis.crypto?.getRandomValues;
-  if (typeof crypto !== "function") {
+  if (typeof crypto !== "function" || !crypto) {
     throw new Error("Crypto API unavailable — cannot generate secure random values");
   }
 
