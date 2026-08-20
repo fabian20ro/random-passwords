@@ -18,11 +18,16 @@ const ERROR_COPY_LABEL = "Copy failed";
 
 const USERNAME_COUNT = 10;
 
+// Character ranges used by category definitions
+const UPPER = CHARSET_UPPER_LOWER_DIGIT.substring(0, 26);
+const LOWER = CHARSET_UPPER_LOWER_DIGIT.substring(26, 52);
+const DIGITS = CHARSET_UPPER_LOWER_DIGIT.substring(52);
+
 // Category definitions for complex password generation
 const CATEGORY_DEFS: { id: string; label: string; chars: string }[] = [
-  { id: "upper", label: "Uppercase (A-Z)", chars: CHARSET_UPPER_LOWER_DIGIT.substring(0, 26) },
-  { id: "lower", label: "Lowercase (a-z)", chars: CHARSET_UPPER_LOWER_DIGIT.substring(26, 52) },
-  { id: "digits", label: "Digits (0-9)", chars: CHARSET_UPPER_LOWER_DIGIT.substring(52) },
+  { id: "upper", label: "Uppercase (A-Z)", chars: UPPER },
+  { id: "lower", label: "Lowercase (a-z)", chars: LOWER },
+  { id: "digits", label: "Digits (0-9)", chars: DIGITS },
 ];
 
 const statusEl = document.getElementById("status") as HTMLParagraphElement;
