@@ -18,16 +18,11 @@ const ERROR_COPY_LABEL = "Copy failed";
 
 const USERNAME_COUNT = 10;
 
-// Character ranges used by category definitions
-const UPPER = CHARSET_UPPER_LOWER_DIGIT.substring(0, 26);
-const LOWER = CHARSET_UPPER_LOWER_DIGIT.substring(26, 52);
-const DIGITS = CHARSET_UPPER_LOWER_DIGIT.substring(52);
-
 // Category definitions for complex password generation
 const CATEGORY_DEFS: { id: string; label: string; chars: string }[] = [
-  { id: "upper", label: "Uppercase (A-Z)", chars: UPPER },
-  { id: "lower", label: "Lowercase (a-z)", chars: LOWER },
-  { id: "digits", label: "Digits (0-9)", chars: DIGITS },
+  { id: "upper", label: "Uppercase (A-Z)", chars: CHARSET_UPPER_LOWER_DIGIT.substring(0, 26) },
+  { id: "lower", label: "Lowercase (a-z)", chars: CHARSET_UPPER_LOWER_DIGIT.substring(26, 52) },
+  { id: "digits", label: "Digits (0-9)", chars: CHARSET_UPPER_LOWER_DIGIT.substring(52) },
 ];
 
 const statusEl = document.getElementById("status") as HTMLParagraphElement;
@@ -155,8 +150,8 @@ function generate(): void {
     renderRows(passwordContainer, passwords);
     renderRows(usernameContainer, usernames);
 
-    const catNames = categories.map(cat => CATEGORY_DEFS.find(d => d.chars === cat[0])?.label ?? "Custom");
     if (categories.length > 0) {
+      const catNames = categories.map(cat => CATEGORY_DEFS.find(d => d.chars === cat[0])?.label ?? "Custom");
       announceStatus(`Generated ${passwords.length} complex passwords using ${catNames.join(", ")}.`);
     } else {
       announceStatus(`Generated ${passwords.length} new passwords and ${usernames.length} usernames.`);
