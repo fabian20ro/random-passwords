@@ -35,8 +35,6 @@ const AMBIGUITY_FREE_SYMBOLS_CHARSET = AMBIGUITY_FREE_CHARSET + SYMBOLS;
  * @returns The generated password string, or empty string if charset is exhausted.
  */
 export function generatePasswordAmbiguityFree(length: number): string {
-  if (!Number.isInteger(length) || length <= 0) return "";
-  if (AMBIGUITY_FREE_CHARSET.length === 0) return "";
   return generatePasswordWithCharset(length, AMBIGUITY_FREE_CHARSET);
 }
 
