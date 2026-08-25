@@ -66,6 +66,7 @@ async function copyToClipboard(text: string, btn: HTMLButtonElement): Promise<vo
     return;
   }
 
+  btn.innerHTML = COPY_ICON;
   btn.classList.remove("copied");
   btn.classList.add("error");
   btn.title = "Clipboard access unavailable or denied";
