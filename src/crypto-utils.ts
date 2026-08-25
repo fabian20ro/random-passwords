@@ -34,8 +34,9 @@ export function getSecureRandomInt(max: number, min: number = 0): number {
   const threshold = UINT32_MODULUS - (UINT32_MODULUS % range);
 
   const getRandomValues = crypto.bind(globalThis.crypto!);
+  // Single scratch buffer for all attempts — avoids a fresh allocation per sampling iteration.
+  const buf = new Uint32Array(1);
   for (let attempts = 0; attempts < MAX_ATTEMPTS; attempts++) {
-    const buf = new Uint32Array(1);
     getRandomValues(buf);
     if (buf[0] < threshold) return min + (buf[0] % range);
   }
