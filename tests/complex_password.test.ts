@@ -1,6 +1,20 @@
 import { describe, expect, it } from "vitest";
 import { getSecureRandomInt, UINT32_MODULUS } from "../src/crypto-utils";
-import { generateComplexPassword } from "../src/password";
+import { generateComplexPassword, CHARS, SYMBOLS, DEFAULT_LENGTH } from "../src/password";
+
+describe("password module constants", () => {
+  it("CHARS is the 62-char alphanumeric set (A-Z, a-z, 0-9)", () => {
+    expect(CHARS).toBe("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789");
+  });
+
+  it("SYMBOLS is the expected symbol set", () => {
+    expect(SYMBOLS).toBe("!@#$%^&*()-_=+[]{}|;:,.<>?");
+  });
+
+  it("DEFAULT_LENGTH is 24", () => {
+    expect(DEFAULT_LENGTH).toBe(24);
+  });
+});
 
 describe("getSecureRandomInt", () => {
   it("should return 0 when max is 1 (trivial case)", () => {
