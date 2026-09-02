@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { generatePassword, generatePasswordWithCharset, generatePasswordWithSymbols, generatePasswordWithLettersOnly, generatePasswordWithNumbersOnly, generateAll, LENGTHS, CHARSET_LEN, isValidPassword, generateComplexPassword, MAX_LENGTH, CHARS, SYMBOLS, generatePasswordAmbiguityFree, generatePasswordAmbiguityFreeWithSymbols } from "../src/password";
+import { generatePassword, generatePasswordWithCharset, generatePasswordWithSymbols, generatePasswordWithLettersOnly, generatePasswordWithNumbersOnly, generateAll, LENGTHS, CHARSET_LEN, isValidPassword, generateComplexPassword, MAX_LENGTH, CHARS, SYMBOLS, generatePasswordAmbiguityFree, generatePasswordAmbiguityFreeWithSymbols, DEFAULT_LENGTH, CHAR_CLASS_UPPER, CHAR_CLASS_LOWER } from "../src/password";
 import { getSecureRandomInt } from "../src/crypto-utils";
 
 const originalCrypto = globalThis.crypto;
@@ -735,5 +735,31 @@ describe("generatePasswordAmbiguityFree", () => {
 
   it("returns an empty string for non-integer length", () => {
     expect(generatePasswordAmbiguityFree(2.5)).toBe("");
+  });
+});
+
+describe("password constants", () => {
+  it("DEFAULT_LENGTH is 24 and drives the no-argument default of generatePassword", () => {
+    expect(DEFAULT_LENGTH).toBe(24);
+    expect(LENGTHS).toContain(DEFAULT_LENGTH);
+    const pw = generatePassword();
+    expect(pw).toHaveLength(DEFAULT_LENGTH);
+  });
+
+  it("CHAR_CLASS_UPPER contains only unique uppercase letters drawn from CHARS", () => {
+    expect([...CHAR_CLASS_UPPER].every(c => /^[A-Z]$/.test(c))).toBe(true);
+    expect(new Set(CHAR_CLASS_UPPER).size).toBe(CHAR_CLASS_UPPER.length);
+    expect([...CHAR_CLASS_UPPER].every(c => CHARS.includes(c))).toBe(true);
+  });
+
+  it("CHAR_CLASS_LOWER contains only unique lowercase letters drawn from CHARS", () => {
+    expect([...CHAR_CLASS_LOWER].every(c => /^[a-z]$/.test(c))).toBe(true);
+    expect(new Set(CHAR_CLASS_LOWER).size).toBe(CHAR_CLASS_LOWER.length);
+    expect([...CHAR_CLASS_LOWER].every(c => CHARS.includes(c))).toBe(true);
+  });
+
+  it("CHARS opens with upper then lower class and the classes do not overlap", () => {
+    expect(CHAR_CLASS_UPPER + CHAR_CLASS_LOWER).toBe(CHARS.substring(0, 52));
+    expect([...CHAR_CLASS_UPPER].some(c => CHAR_CLASS_LOWER.includes(c))).toBe(false);
   });
 });
