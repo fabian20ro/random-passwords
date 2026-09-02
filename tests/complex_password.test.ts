@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getSecureRandomInt, UINT32_MODULUS } from "../src/crypto-utils";
-import { generateComplexPassword, CHARS, SYMBOLS, DEFAULT_LENGTH, CHARSET_LEN, LENGTHS, generatePasswordAmbiguityFree, generatePassword, generatePasswordWithSymbols, generatePasswordAmbiguityFreeWithSymbols, generatePasswordWithLettersOnly, generatePasswordWithNumbersOnly, generatePasswordWithCharset, MAX_LENGTH } from "../src/password";
+import { generateComplexPassword, CHARS, SYMBOLS, DEFAULT_LENGTH, CHARSET_LEN, LENGTHS, generatePasswordAmbiguityFree, generatePassword, generatePasswordWithSymbols, generatePasswordAmbiguityFreeWithSymbols, generatePasswordWithLettersOnly, generatePasswordWithNumbersOnly, generatePasswordWithCharset, MAX_LENGTH, CHAR_CLASS_UPPER, CHAR_CLASS_LOWER, CHAR_CLASS_DIGIT } from "../src/password";
 
 describe("password module constants", () => {
   it("CHARS is the 62-char alphanumeric set (A-Z, a-z, 0-9)", () => {
@@ -9,6 +9,21 @@ describe("password module constants", () => {
 
   it("SYMBOLS is the expected symbol set", () => {
     expect(SYMBOLS).toBe("!@#$%^&*()-_=+[]{}|;:,.<>?");
+  });
+
+  it("CHAR_CLASS_UPPER is A-Z (26 chars)", () => {
+    expect(CHAR_CLASS_UPPER).toBe("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+    expect(CHAR_CLASS_UPPER).toHaveLength(26);
+  });
+
+  it("CHAR_CLASS_LOWER is a-z (26 chars)", () => {
+    expect(CHAR_CLASS_LOWER).toBe("abcdefghijklmnopqrstuvwxyz");
+    expect(CHAR_CLASS_LOWER).toHaveLength(26);
+  });
+
+  it("CHAR_CLASS_DIGIT is 0-9 (10 chars)", () => {
+    expect(CHAR_CLASS_DIGIT).toBe("0123456789");
+    expect(CHAR_CLASS_DIGIT).toHaveLength(10);
   });
 
   it("DEFAULT_LENGTH is 24", () => {
