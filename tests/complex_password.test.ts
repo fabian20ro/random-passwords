@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getSecureRandomInt, UINT32_MODULUS } from "../src/crypto-utils";
-import { generateComplexPassword, CHARS, SYMBOLS, DEFAULT_LENGTH, CHARSET_LEN, LENGTHS, generatePasswordAmbiguityFree } from "../src/password";
+import { generateComplexPassword, CHARS, SYMBOLS, DEFAULT_LENGTH, CHARSET_LEN, LENGTHS, generatePasswordAmbiguityFree, generatePassword, generatePasswordWithSymbols, generatePasswordAmbiguityFreeWithSymbols } from "../src/password";
 
 describe("password module constants", () => {
   it("CHARS is the 62-char alphanumeric set (A-Z, a-z, 0-9)", () => {
@@ -45,6 +45,69 @@ describe("generatePasswordAmbiguityFree", () => {
     expect(generatePasswordAmbiguityFree(0)).toBe("");
     expect(generatePasswordAmbiguityFree(-3)).toBe("");
     expect(generatePasswordAmbiguityFree(8.5)).toBe("");
+  });
+});
+
+describe("generatePasswordAmbiguityFreeWithSymbols", () => {
+  const AMBIGUOUS = new Set(["0", "O", "l", "I", "1"]);
+
+  it("returns a password of the requested length", () => {
+    const pw = generatePasswordAmbiguityFreeWithSymbols(16);
+    expect(pw).toHaveLength(16);
+  });
+
+  it("never contains visually ambiguous characters (0/O/l/I/1)", () => {
+    const pw = generatePasswordAmbiguityFreeWithSymbols(64);
+    for (const char of pw) {
+      expect(AMBIGUOUS.has(char)).toBe(false);
+      expect(CHARS + SYMBOLS).toContain(char);
+    }
+  });
+
+  it("returns empty string for zero, negative, and non-integer lengths", () => {
+    expect(generatePasswordAmbiguityFreeWithSymbols(0)).toBe("");
+    expect(generatePasswordAmbiguityFreeWithSymbols(-3)).toBe("");
+    expect(generatePasswordAmbiguityFreeWithSymbols(8.5)).toBe("");
+  });
+});
+
+describe("generatePassword", () => {
+  it("returns a password of the requested length", () => {
+    const pw = generatePassword(16);
+    expect(pw).toHaveLength(16);
+  });
+
+  it("contains only alphanumeric characters from CHARS", () => {
+    const pw = generatePassword(64);
+    for (const char of pw) {
+      expect(CHARS).toContain(char);
+    }
+  });
+
+  it("returns empty string for zero, negative, and non-integer lengths", () => {
+    expect(generatePassword(0)).toBe("");
+    expect(generatePassword(-3)).toBe("");
+    expect(generatePassword(8.5)).toBe("");
+  });
+});
+
+describe("generatePasswordWithSymbols", () => {
+  it("returns a password of the requested length", () => {
+    const pw = generatePasswordWithSymbols(16);
+    expect(pw).toHaveLength(16);
+  });
+
+  it("contains only characters from CHARS plus SYMBOLS", () => {
+    const pw = generatePasswordWithSymbols(64);
+    for (const char of pw) {
+      expect(CHARS + SYMBOLS).toContain(char);
+    }
+  });
+
+  it("returns empty string for zero, negative, and non-integer lengths", () => {
+    expect(generatePasswordWithSymbols(0)).toBe("");
+    expect(generatePasswordWithSymbols(-3)).toBe("");
+    expect(generatePasswordWithSymbols(8.5)).toBe("");
   });
 });
 
