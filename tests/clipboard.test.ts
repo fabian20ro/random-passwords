@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { vi } from "vitest";
-import { canCopyToClipboard, copyTextToClipboard, getLastCopyLabel, getLastCopyAt, MAX_CLIPBOARD_TEXT_BYTES, CLIPBOARD_TIMEOUT_MS, probeClipboard } from "../src/clipboard";
+import { canCopyToClipboard, copyTextToClipboard, getLastCopyLabel, getLastCopyAt, MAX_CLIPBOARD_TEXT_BYTES, CLIPBOARD_TIMEOUT_MS, probeClipboard, OVERSIZED_TEXT } from "../src/clipboard";
+import type { CopyReason } from "../src/clipboard";
 
 type FallbackStubOptions = {
   createElement?: (tag: string) => unknown;
@@ -1154,5 +1155,15 @@ describe("copyTextToClipboard blob size limit", () => {
     await expect(copyTextToClipboard(undefined, oversizedText)).resolves.toBe(false);
 
     expect(createElementCallCount).toBe(0);
+  });
+});
+
+describe("OVERSIZED_TEXT", () => {
+  it("is the exact sentinel string identifying oversized clipboard payloads", () => {
+    expect(OVERSIZED_TEXT).toBe("oversized_text");
+
+    // Sentinel must remain a valid CopyReason value (compile-time + runtime guard).
+    const reason: CopyReason = OVERSIZED_TEXT;
+    expect(reason).toBe(OVERSIZED_TEXT);
   });
 });
