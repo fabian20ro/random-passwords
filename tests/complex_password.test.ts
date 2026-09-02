@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getSecureRandomInt, UINT32_MODULUS } from "../src/crypto-utils";
-import { generateComplexPassword, CHARS, SYMBOLS, DEFAULT_LENGTH, CHARSET_LEN, LENGTHS, generatePasswordAmbiguityFree, generatePassword, generatePasswordWithSymbols, generatePasswordAmbiguityFreeWithSymbols } from "../src/password";
+import { generateComplexPassword, CHARS, SYMBOLS, DEFAULT_LENGTH, CHARSET_LEN, LENGTHS, generatePasswordAmbiguityFree, generatePassword, generatePasswordWithSymbols, generatePasswordAmbiguityFreeWithSymbols, generatePasswordWithLettersOnly, generatePasswordWithNumbersOnly, generatePasswordWithCharset, MAX_LENGTH } from "../src/password";
 
 describe("password module constants", () => {
   it("CHARS is the 62-char alphanumeric set (A-Z, a-z, 0-9)", () => {
@@ -108,6 +108,84 @@ describe("generatePasswordWithSymbols", () => {
     expect(generatePasswordWithSymbols(0)).toBe("");
     expect(generatePasswordWithSymbols(-3)).toBe("");
     expect(generatePasswordWithSymbols(8.5)).toBe("");
+  });
+});
+
+describe("generatePasswordWithLettersOnly", () => {
+  const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+
+  it("returns a password of the requested length", () => {
+    const pw = generatePasswordWithLettersOnly(16);
+    expect(pw).toHaveLength(16);
+  });
+
+  it("contains only letters (A-Z, a-z) — never digits or symbols", () => {
+    const pw = generatePasswordWithLettersOnly(64);
+    for (const char of pw) {
+      expect(LETTERS).toContain(char);
+    }
+  });
+
+  it("returns empty string for zero, negative, and non-integer lengths", () => {
+    expect(generatePasswordWithLettersOnly(0)).toBe("");
+    expect(generatePasswordWithLettersOnly(-3)).toBe("");
+    expect(generatePasswordWithLettersOnly(8.5)).toBe("");
+  });
+});
+
+describe("generatePasswordWithNumbersOnly", () => {
+  it("returns a password of the requested length", () => {
+    const pw = generatePasswordWithNumbersOnly(16);
+    expect(pw).toHaveLength(16);
+  });
+
+  it("contains only decimal digits (0-9)", () => {
+    const pw = generatePasswordWithNumbersOnly(64);
+    for (const char of pw) {
+      expect("0123456789").toContain(char);
+    }
+  });
+
+  it("returns empty string for zero, negative, and non-integer lengths", () => {
+    expect(generatePasswordWithNumbersOnly(0)).toBe("");
+    expect(generatePasswordWithNumbersOnly(-3)).toBe("");
+    expect(generatePasswordWithNumbersOnly(8.5)).toBe("");
+  });
+});
+
+describe("generatePasswordWithCharset", () => {
+  it("returns a password of the requested length using only the given charset", () => {
+    const pw = generatePasswordWithCharset(32, "abcXYZ");
+    expect(pw).toHaveLength(32);
+    for (const char of pw) {
+      expect("abcXYZ").toContain(char);
+    }
+  });
+
+  it("deduplicates charset characters (duplicate entries do not change output validity)", () => {
+    const pw = generatePasswordWithCharset(32, "aaaab");
+    for (const char of pw) {
+      expect("ab").toContain(char);
+    }
+  });
+
+  it("repeats the sole character when the charset is a single character", () => {
+    expect(generatePasswordWithCharset(8, "X")).toBe("XXXXXXXX");
+  });
+
+  it("throws when length exceeds MAX_LENGTH", () => {
+    expect(() => generatePasswordWithCharset(MAX_LENGTH + 1, "ab")).toThrow();
+  });
+
+  it("returns empty string for zero, negative, non-integer lengths, empty, and non-string charsets", () => {
+    expect(generatePasswordWithCharset(0, "abc")).toBe("");
+    expect(generatePasswordWithCharset(-3, "abc")).toBe("");
+    expect(generatePasswordWithCharset(8.5, "abc")).toBe("");
+    expect(generatePasswordWithCharset(10, "")).toBe("");
+    expect(() => {
+      // non-string charset is rejected by the typeof guard
+      expect(generatePasswordWithCharset(10, undefined as unknown as string)).toBe("");
+    }).not.toThrow();
   });
 });
 
