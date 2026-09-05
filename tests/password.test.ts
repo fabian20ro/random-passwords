@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { generatePassword, generatePasswordWithCharset, generatePasswordWithSymbols, generatePasswordWithLettersOnly, generatePasswordWithNumbersOnly, generateAll, LENGTHS, CHARSET_LEN, isValidPassword, generateComplexPassword, MAX_LENGTH, CHARS, SYMBOLS, generatePasswordAmbiguityFree, generatePasswordAmbiguityFreeWithSymbols, DEFAULT_LENGTH, CHAR_CLASS_UPPER, CHAR_CLASS_LOWER } from "../src/password";
+import { generatePassword, generatePasswordWithCharset, generatePasswordWithSymbols, generatePasswordWithLettersOnly, generatePasswordWithNumbersOnly, generateAll, LENGTHS, CHARSET_LEN, isValidPassword, generateComplexPassword, MAX_LENGTH, CHARS, SYMBOLS, generatePasswordAmbiguityFree, generatePasswordAmbiguityFreeWithSymbols, DEFAULT_LENGTH, CHAR_CLASS_UPPER, CHAR_CLASS_LOWER, CHAR_CLASS_DIGIT } from "../src/password";
 import { getSecureRandomInt } from "../src/crypto-utils";
 
 const originalCrypto = globalThis.crypto;
@@ -758,8 +758,18 @@ describe("password constants", () => {
     expect([...CHAR_CLASS_LOWER].every(c => CHARS.includes(c))).toBe(true);
   });
 
+  it("CHAR_CLASS_DIGIT contains only the ten unique decimal digits drawn from CHARS", () => {
+    expect([...CHAR_CLASS_DIGIT].every(c => /^[0-9]$/.test(c))).toBe(true);
+    expect(new Set(CHAR_CLASS_DIGIT).size).toBe(CHAR_CLASS_DIGIT.length);
+    expect(CHAR_CLASS_DIGIT.length).toBe(10);
+    expect([...CHAR_CLASS_DIGIT].every(c => CHARS.includes(c))).toBe(true);
+  });
+
   it("CHARS opens with upper then lower class and the classes do not overlap", () => {
     expect(CHAR_CLASS_UPPER + CHAR_CLASS_LOWER).toBe(CHARS.substring(0, 52));
     expect([...CHAR_CLASS_UPPER].some(c => CHAR_CLASS_LOWER.includes(c))).toBe(false);
+    expect(CHAR_CLASS_UPPER + CHAR_CLASS_LOWER + CHAR_CLASS_DIGIT).toBe(CHARS);
+    expect([...CHAR_CLASS_DIGIT].some(c => CHAR_CLASS_UPPER.includes(c))).toBe(false);
+    expect([...CHAR_CLASS_DIGIT].some(c => CHAR_CLASS_LOWER.includes(c))).toBe(false);
   });
 });
