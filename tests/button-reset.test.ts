@@ -1542,4 +1542,17 @@ describe("getResetDescription", () => {
     cancelButtonReset(target);
     expect(getResetDescription(target)).toBeUndefined();
   });
+
+  it ("returns undefined after the scheduled reset fires naturally", () => {
+    const target = { id: "get-desc-post-fire" };
+    scheduleButtonReset(target, 100, vi.fn(), "firing-desc");
+    expect(getResetDescription(target)).toBe("firing-desc");
+
+    vi.advanceTimersByTime(100);
+
+    // Description entry is deleted alongside the timeout entry when the
+    // reset fires — same cleanup branch as the cancel path.
+    expect(getResetDescription(target)).toBeUndefined();
+    expect(resetDescriptions.has(target)).toBe(false);
+  });
 });
