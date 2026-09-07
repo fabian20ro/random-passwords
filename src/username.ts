@@ -40,6 +40,15 @@ export function generateUsername(includeNumber: boolean = true, lowercase: boole
 
 export { capitalize };
 
+/**
+ * Validates that a string matches the format produced by generateUsername:
+ * Adjective_Noun_#### or adjective_noun_#### (each word capitalized or all
+ * lowercase, optional four-digit number suffix).
+ */
+export function validateUsername(input: string): boolean {
+  return /^([A-Z][a-z]+|[a-z]+)_([A-Z][a-z]+|[a-z]+)(_[0-9]{4})?$/.test(input);
+}
+
 export function randomFourDigitNumber(): number {
   const range = 9000;
   return getSecureRandomInt(range) + 1000;

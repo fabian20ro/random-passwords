@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { capitalize, generateUsername, generateUsernames, USERNAME_ADJECTIVES, USERNAME_NOUNS, randomFourDigitNumber } from "../src/username";
+import { capitalize, generateUsername, generateUsernames, USERNAME_ADJECTIVES, USERNAME_NOUNS, randomFourDigitNumber, validateUsername } from "../src/username";
 
 describe("username generation", () => {
   describe("randomFourDigitNumber()", () => {
@@ -446,5 +446,23 @@ describe("username generation", () => {
 
     expect(observedMax).toBeLessThanOrEqual(expected * 2.5);
     expect(observedMin).toBeGreaterThanOrEqual(expected * 0.5);
+  });
+
+  describe("validateUsername()", () => {
+    it("accepts a valid capitalized Adjective_Noun_Number format", () => {
+      expect(validateUsername("Clever_Otter_4821")).toBe(true);
+    });
+
+    it("accepts a valid lowercase adjective_noun_number format", () => {
+      expect(validateUsername("clever_otter_4821")).toBe(true);
+    });
+
+    it("rejects a short number suffix (suffix must be exactly four digits)", () => {
+      expect(validateUsername("Clever_Otter_99")).toBe(false);
+    });
+
+    it("rejects a double underscore between parts", () => {
+      expect(validateUsername("Clever__Otter_4821")).toBe(false);
+    });
   });
 });
