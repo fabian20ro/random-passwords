@@ -1502,6 +1502,19 @@ describe("getResetDescription", () => {
     expect(getResetDescription(target)).toBe("second-descriptor");
   });
 
+  it ("clears a previously-stored description when rescheduled without one", () => {
+    const target = { id: "get-desc-reschedule-clear" };
+    scheduleButtonReset(target, 200, vi.fn(), "stale-descriptor");
+    expect(getResetDescription(target)).toBe("stale-descriptor");
+
+    // Reschedule with no description argument — the internal cancel path
+    // clears the old entry and the new schedule must not re-attach it.
+    scheduleButtonReset(target, 150, vi.fn());
+
+    expect(getResetDescription(target)).toBeUndefined();
+    expect(resetDescriptions.has(target)).toBe(false);
+  });
+
   it ("returns undefined for null target without throwing or leaking", () => {
     const sentinel = { id: "get-desc-null-sentinel" };
     scheduleButtonReset({ id: "pre-null" }, 100, vi.fn(), "busy-desc");
