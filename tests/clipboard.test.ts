@@ -455,6 +455,15 @@ describe("copyTextToClipboard", () => {
 
     // The fallback should set tabIndex = -1 so unfocused elements can be selected on mobile
     expect((capturedEl as any).tabIndex).toBe(-1);
+
+    // The fallback must mark the textarea readonly so the browser treats it as
+    // non-user-editable and keeps it hidden from focus/assistive-tech flows.
+    // If the attribute is dropped, off-screen editables may steal focus on
+    // mobile. The stub's setAttribute is a vi.fn() — this is the only test
+    // that asserts the readonly guard, so removing it would fail here only.
+    const setAttributeSpy = (capturedEl as any).setAttribute;
+    expect(setAttributeSpy).toHaveBeenCalledWith("readonly", "");
+    expect(setAttributeSpy.mock.calls.filter(([name]: [string]) => name !== "readonly")).toEqual([]);
   });
 
   it("returns false when neither clipboard API nor document available", async () => {

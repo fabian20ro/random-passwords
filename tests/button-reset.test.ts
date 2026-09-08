@@ -233,6 +233,29 @@ describe("scheduleButtonReset", () => {
     });
   });
 
+  it ("does not throw for non-numeric delayMs — the finite guard only rejects non-finite numbers", () => {
+    // Contract asymmetry: the top-of-function guard only rejects non-finite
+    // *numbers* (±Infinity). Other types bypass it entirely and fall through
+    // to Math.max(0, delayMs) coercion instead of raising a TypeError.
+    const strTarget = { id: "delay-non-numeric-str" };
+    const strReset = vi.fn();
+
+    // "500" is a string, not a number — it must not trip the finite guard.
+    expect(() => scheduleButtonReset(strTarget, "500" as any, strReset)).not.toThrow();
+    expect(resetTimeouts.has(strTarget)).toBe(true);
+    expect(isResetScheduled(strTarget)).toBe(true);
+
+    // Booleans coerce inside Math.max: true → 1ms.
+    const boolTarget = { id: "delay-non-numeric-bool" };
+    const boolReset = vi.fn();
+    scheduleButtonReset(boolTarget, true as any, boolReset);
+
+    vi.advanceTimersByTime(0);
+    expect(boolReset).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(boolReset).toHaveBeenCalledTimes(1);
+  });
+
   it ("handles multiple 0ms delays correctly", () => {
     const target = { id: "test" };
     const reset = vi.fn();
