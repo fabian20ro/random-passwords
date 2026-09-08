@@ -409,6 +409,50 @@ describe("getSecureRandomInt", () => {
     }
   });
 
+  it("applies min offset to a sample accepted at the top of the acceptance zone (threshold-1)", () => {
+    // min=10, max=17: range=7, UINT32_MODULUS%7 = 4, threshold = UINT32_MODULUS - 4.
+    // Pins the exact min + (buf[0] % range) mapping when the accepted sample is the
+    // largest accepted uint32 (threshold-1) — the boundary tests above cover this
+    // sample only with min=0, and the min-offset tests above only use low samples
+    // far below the threshold.
+    const min = 10;
+    const max = 17;
+    const threshold = UINT32_MODULUS - (UINT32_MODULUS % (max - min));
+    const realCrypto = (globalThis as any).crypto;
+    let callCount = 0;
+    Object.defineProperty(globalThis, "crypto", {
+      value: {
+        getRandomValues(arr: Uint32Array) {
+          callCount++;
+          if (callCount === 1) {
+            // exactly at threshold — rejected by >= comparison
+            arr[0] = threshold;
+          } else {
+            // top of the acceptance zone — accepted
+            arr[0] = threshold - 1;
+          }
+          return arr;
+        },
+      },
+      configurable: true,
+      writable: true,
+    });
+    try {
+      const result = getSecureRandomInt(max, min);
+      expect(result).toBeGreaterThanOrEqual(min);
+      expect(result).toBeLessThan(max);
+      // (threshold - 1) % 7 === 4294967291 % 7 === 6; offset by min=10 → 16
+      expect(result).toBe(16);
+      expect(callCount).toBe(2); // one rejection at threshold, accepted at threshold-1
+    } finally {
+      Object.defineProperty(globalThis, "crypto", {
+        value: realCrypto,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
+
   it("does not call getRandomValues a fourth time if the first sample is valid", () => {
     const realCrypto = (globalThis as any).crypto;
     let callCount = 0;
