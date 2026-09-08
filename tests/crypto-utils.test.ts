@@ -507,6 +507,45 @@ describe("getSecureRandomInt", () => {
     }
   });
 
+  it("reuses a single scratch buffer across all sampling attempts (no fresh allocation per iteration)", () => {
+    // The implementation samples through one shared Uint32Array scratch buffer
+    // for every rejection attempt (see crypto-utils.ts) — an observable
+    // allocation contract that call-count/value assertions alone do not pin.
+    const realCrypto = (globalThis as any).crypto;
+    const buffers: Uint32Array[] = [];
+    let callCount = 0;
+    Object.defineProperty(globalThis, "crypto", {
+      value: {
+        getRandomValues(arr: Uint32Array) {
+          callCount++;
+          buffers.push(arr);
+          if (callCount <= 3) {
+            arr[0] = 0xFFFFFFFF; // rejected — above threshold
+          } else {
+            arr[0] = 0x10; // accepted
+          }
+          return arr;
+        },
+      },
+      configurable: true,
+      writable: true,
+    });
+    try {
+      getSecureRandomInt(7);
+      expect(buffers.length).toBe(4);
+      // All four attempts must sample through the same buffer instance.
+      for (const buf of buffers) {
+        expect(buf).toBe(buffers[0]);
+      }
+    } finally {
+      Object.defineProperty(globalThis, "crypto", {
+        value: realCrypto,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
+
   it("rejects buf[0] exactly equal to threshold (>= boundary of rejection zone)", () => {
     // max=7: range=7, UINT32_MODULUS%7=4, threshold = UINT32_MODULUS - 4.
     // The while condition is `buf[0] >= threshold`, so exact-threshold values are rejected.
