@@ -908,6 +908,31 @@ describe("copyTextToClipboard", () => {
     expect(atMs).toBeLessThanOrEqual(Date.now());
   });
 
+  it("keeps lastCopyLabel undefined after successful execCommand fallback with no label", async () => {
+    const mockTextarea = {
+      value: "",
+      setAttribute: vi.fn(),
+      style: { position: "", left: "" },
+      select: vi.fn(),
+      setSelectionRange: vi.fn((_start: number, _end: number) => {}),
+    };
+
+    vi.stubGlobal("document", createFallbackStub({
+      createElement: () => mockTextarea as unknown as HTMLTextAreaElement,
+    }));
+
+    const clipboard = {
+      async writeText(): Promise<void> {
+        throw new Error("denied");
+      },
+    } satisfies Pick<Clipboard, "writeText">;
+
+    const result = await copyTextToClipboard(clipboard, "fallback-secret", CLIPBOARD_TIMEOUT_MS);
+
+    expect(result).toBe(true);
+    expect(getLastCopyLabel()).toBeUndefined();
+  });
+
 }); // copyTextToClipboard describe block closes here
 
 describe("probeClipboard", () => {
