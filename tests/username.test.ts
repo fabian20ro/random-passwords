@@ -70,6 +70,24 @@ describe("username generation", () => {
       }
     });
 
+    it("emits all-lowercase parts when lowercase is true", () => {
+      // Verifies the lowercase flag contract: both words are emitted from the
+      // source lists uncapitalized, unlike the default Capitalized_Title format.
+      for (let i = 0; i < 50; i++) {
+        const username = generateUsername(true, true);
+        const parts = username.split("_");
+        expect(parts).toHaveLength(3);
+        expect(parts[0]).toMatch(/^[a-z]+$/);
+        expect(parts[1]).toMatch(/^[a-z]+$/);
+        expect(parts[2]).toMatch(/^[0-9]{4}$/);
+        expect(USERNAME_ADJECTIVES).toContain(parts[0]);
+        expect(USERNAME_NOUNS).toContain(parts[1]);
+      }
+
+      const twoPart = generateUsername(false, true);
+      expect(twoPart).toMatch(/^[a-z]+_[a-z]+$/);
+    });
+
     it("only emits adjectives and nouns from their defined lists (includeNumber=false)", () => {
       for (let i = 0; i < 100; i++) {
         const username = generateUsername(false);
