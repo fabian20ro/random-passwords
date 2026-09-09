@@ -25,6 +25,26 @@ const CATEGORY_DEFS: { id: string; label: string; chars: string }[] = [
   { id: "digits", label: "Digits (0-9)", chars: CHARSET_UPPER_LOWER_DIGIT.substring(52) },
 ];
 
+const NO_AMBIGUOUS_LABEL_TEXT = "Exclude ambiguous characters (0, O, 1, I, l)";
+
+function createNoAmbiguousControl(): HTMLInputElement | null {
+  const list = document.getElementById("passwords");
+  const anchor = list?.parentElement;
+  if (!anchor || !list) return null;
+
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.id = "no-ambiguous";
+
+  const label = document.createElement("label");
+  label.appendChild(checkbox);
+  label.appendChild(document.createTextNode(` ${NO_AMBIGUOUS_LABEL_TEXT}`));
+  anchor.insertBefore(label, list);
+  return checkbox;
+}
+
+const noAmbiguousCheckbox = createNoAmbiguousControl();
+
 const statusEl = document.getElementById("status") as HTMLParagraphElement;
 if (statusEl) statusEl.setAttribute("role", "status");
 
@@ -143,7 +163,7 @@ function generate(): void {
         passwords = [...categoryPasswords, combined].filter(pw => pw.length > 0);
       }
     } else {
-      passwords = generateAll();
+      passwords = generateAll(1, { ambiguityFree: noAmbiguousCheckbox?.checked ?? false });
     }
 
     const usernames = generateUsernames(USERNAME_COUNT);

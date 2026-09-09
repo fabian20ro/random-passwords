@@ -1201,3 +1201,13 @@ describe("OVERSIZED_TEXT", () => {
     expect(reason).toBe(OVERSIZED_TEXT);
   });
 });
+
+describe("CLIPBOARD_TIMEOUT_MS", () => {
+  it("pins the default copy timeout to 3000 ms", () => {
+    // This constant is the default timeoutMs for copyTextToClipboard's
+    // Promise.race (and probeClipboard) — every default-arg caller inherits it.
+    // Existing timeout tests rely on it firing but none pin the value, so an
+    // accidental change to the constant would silently alter hang handling.
+    expect(CLIPBOARD_TIMEOUT_MS).toBe(3000);
+  });
+});
