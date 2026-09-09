@@ -482,5 +482,12 @@ describe("username generation", () => {
     it("rejects a double underscore between parts", () => {
       expect(validateUsername("Clever__Otter_4821")).toBe(false);
     });
+
+    it("accepts a two-part username without the optional number suffix", () => {
+      // The suffix group in the validation regex is optional — a
+      // Capitalized_Title or all-lowercase Adjective_Noun (no number) is valid.
+      expect(validateUsername("Clever_Otter")).toBe(true);
+      expect(validateUsername("clever_otter")).toBe(true);
+    });
   });
 });
