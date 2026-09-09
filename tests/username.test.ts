@@ -508,6 +508,12 @@ describe("username generation", () => {
       expect(validateUsername("Clever_Otter_99")).toBe(false);
     });
 
+    it("rejects a long number suffix (suffix must be exactly four digits)", () => {
+      // Upper bound of the {4} contract: a five-digit suffix must not match,
+      // even though it contains a valid four-digit prefix.
+      expect(validateUsername("Clever_Otter_12345")).toBe(false);
+    });
+
     it("rejects a double underscore between parts", () => {
       expect(validateUsername("Clever__Otter_4821")).toBe(false);
     });
