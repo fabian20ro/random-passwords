@@ -736,6 +736,17 @@ describe("generatePasswordAmbiguityFree", () => {
   it("returns an empty string for non-integer length", () => {
     expect(generatePasswordAmbiguityFree(2.5)).toBe("");
   });
+
+  it("produces a 24-character string with zero occurrences of each ambiguous character across 100 iterations", () => {
+    const ambiguous = ["0", "O", "1", "I", "l"];
+    for (let i = 0; i < 100; i++) {
+      const pw = generatePasswordAmbiguityFree(24);
+      expect(pw).toHaveLength(24);
+      for (const c of ambiguous) {
+        expect(pw.split(c).length - 1).toBe(0);
+      }
+    }
+  });
 });
 
 describe("password constants", () => {
