@@ -546,6 +546,48 @@ describe("getSecureRandomInt", () => {
     }
   });
 
+  it("samples exactly one uint32 per attempt (scratch buffer shape contract)", () => {
+    // The reuse test pins buffer sharing across attempts but not buffer shape.
+    // Production samples through one Uint32Array(1) per rejection attempt —
+    // a wider or differently-typed buffer changes the sampling unit (and thus
+    // the rejection-sampling bias argument) without failing identity checks.
+    const realCrypto = (globalThis as any).crypto;
+    const buffers: ArrayBufferView[] = [];
+    let callCount = 0;
+    Object.defineProperty(globalThis, "crypto", {
+      value: {
+        getRandomValues(arr: Uint32Array) {
+          callCount++;
+          buffers.push(arr);
+          if (callCount <= 2) {
+            arr[0] = 0xFFFFFFFF; // rejected — above threshold for range=7
+          } else {
+            arr[0] = 0x10; // accepted
+          }
+          return arr;
+        },
+      },
+      configurable: true,
+      writable: true,
+    });
+    try {
+      const result = getSecureRandomInt(7);
+      // 0x10 % 7 === 16 % 7 === 2
+      expect(result).toBe(2);
+      expect(buffers.length).toBe(3); // one sample per attempt, including rejections
+      for (const buf of buffers) {
+        expect(buf).toBeInstanceOf(Uint32Array);
+        expect(buf.length).toBe(1); // exactly one uint32 per attempt
+      }
+    } finally {
+      Object.defineProperty(globalThis, "crypto", {
+        value: realCrypto,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
+
   it("rejects buf[0] exactly equal to threshold (>= boundary of rejection zone)", () => {
     // max=7: range=7, UINT32_MODULUS%7=4, threshold = UINT32_MODULUS - 4.
     // The while condition is `buf[0] >= threshold`, so exact-threshold values are rejected.
