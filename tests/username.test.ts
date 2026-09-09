@@ -168,6 +168,35 @@ describe("username generation", () => {
     });
   });
 
+  it("emits all-lowercase 3-part usernames from generateUsernames when lowercase is true", () => {
+    // Propagates the lowercase flag (parameter 4) through generateUsernames:
+    // every generated item must be adjective_noun_#### with lowercase words,
+    // unlike the default Capitalized_Title format used when lowercase is omitted.
+    const result = generateUsernames(20, undefined, undefined, true);
+    expect(result).toHaveLength(20);
+    for (const u of result) {
+      expect(u).toMatch(/^[a-z]+_[a-z]+_[0-9]{4}$/);
+      const [adj, noun] = u.split("_");
+      expect(USERNAME_ADJECTIVES).toContain(adj);
+      expect(USERNAME_NOUNS).toContain(noun);
+    }
+  });
+
+  it("emits all-lowercase 2-part usernames from generateUsernames with includeNumber=false and lowercase=true", () => {
+    // Combined flags: no number suffix AND lowercase words, propagated
+    // through the generateUsernames → generateUsername call chain.
+    const result = generateUsernames(20, undefined, false, true);
+    expect(result).toHaveLength(20);
+    for (const u of result) {
+      expect(u).toMatch(/^[a-z]+_[a-z]+$/);
+      expect(u.split("_")).toHaveLength(2);
+      expect(u).not.toMatch(/[0-9]{4}$/);
+      const [adj, noun] = u.split("_");
+      expect(USERNAME_ADJECTIVES).toContain(adj);
+      expect(USERNAME_NOUNS).toContain(noun);
+    }
+  });
+
   describe("capitalize()", () => {
     it("returns input unchanged for empty or falsy strings", () => {
       expect(capitalize("")).toBe("");

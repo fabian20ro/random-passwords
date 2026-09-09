@@ -125,6 +125,25 @@ describe("generatePassword", () => {
     }
   });
 
+  it("guarantees at least two distinct character classes by default when diversity retries are exhausted", () => {
+    // Pin the default minClassesPerPassword=2 contract. Force the base
+    // generator to emit a single class (all 'A' via zeroed crypto) so only
+    // the fallback injection can restore diversity. With maxRetries=0 the
+    // retry loop never runs — injectMissingClasses must restore a second
+    // class for the default (2) requirement. A regression of the default
+    // to 1 would leave all-'A' passwords with a single class.
+    installCryptoMock(new Array(400).fill(0));
+    const passwords = generateAll(1, { maxRetries: 0 });
+    for (const pw of passwords) {
+      expect(pw.length).toBeGreaterThan(0);
+      const classes =
+        (/[A-Z]/.test(pw) ? 1 : 0) +
+        (/[a-z]/.test(pw) ? 1 : 0) +
+        (/[0-9]/.test(pw) ? 1 : 0);
+      expect(classes).toBeGreaterThanOrEqual(2);
+    }
+  });
+
   it("enforces diversity via fallback injection when retries are exhausted", () => {
     // With maxRetries=0 the loop never runs — injectMissingClasses must guarantee diversity.
     const passwords = generateAll(1, { minClassesPerPassword: 3, maxRetries: 0 });
