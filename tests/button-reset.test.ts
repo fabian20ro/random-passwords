@@ -1360,6 +1360,29 @@ describe("cancelButtonReset", () => {
       expect(() => cancelButtonReset(target)).not.toThrow();
     });
 
+    it ("completes state cleanup and reports success even when the onCancel hook throws", () => {
+      const target = { id: "onCancel-error-state" };
+      const reset = vi.fn();
+
+      scheduleButtonReset(
+        target,
+        200,
+        reset,
+        "boom-desc",
+        () => { throw new Error("hook boom"); }
+      );
+      expect(isResetScheduled(target)).toBe(true);
+
+      // The hook throws during cancellation — the error is swallowed, but the
+      // success contract is more than "no throw": cancel must still report true
+      // and finish deleting the hook and description entries (defined order in
+      // cancelButtonReset), so no pending state survives a broken cleanup hook.
+      expect(cancelButtonReset(target)).toBe(true);
+      expect(isResetScheduled(target)).toBe(false);
+      expect(getResetDescription(target)).toBeUndefined();
+      expect(reset).not.toHaveBeenCalled();
+    });
+
     it ("fires onCancel once per cancellation event", () => {
       const target = { id: "onCancel-per-event" };
       let cancelCount = 0;
