@@ -233,6 +233,26 @@ describe("scheduleButtonReset", () => {
     });
   });
 
+  it ("throws on ±Infinity delay WITHOUT cancelling the target's existing pending schedule (guard runs before clear)", () => {
+    // Guard-placement contract: parameter validation happens before
+    // cancelButtonReset, so a rejected Infinity delay must leave any
+    // pre-existing schedule intact — still pending, still fires on its own time.
+    const target = { id: "inf-preexisting" };
+    const reset = vi.fn();
+    scheduleButtonReset(target, 500, reset);
+    expect(isResetScheduled(target)).toBe(true);
+
+    expect(() => scheduleButtonReset(target, Infinity, vi.fn())).toThrow(TypeError);
+    expect(() => scheduleButtonReset(target, -Infinity, vi.fn())).toThrow(TypeError);
+
+    expect(isResetScheduled(target)).toBe(true);
+    expect(resetTimeouts.has(target)).toBe(true);
+    vi.advanceTimersByTime(499);
+    expect(reset).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(reset).toHaveBeenCalledTimes(1);
+  });
+
   it ("does not throw for non-numeric delayMs — the finite guard only rejects non-finite numbers", () => {
     // Contract asymmetry: the top-of-function guard only rejects non-finite
     // *numbers* (±Infinity). Other types bypass it entirely and fall through
