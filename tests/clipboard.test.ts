@@ -942,6 +942,29 @@ describe("copyTextToClipboard", () => {
     expect(getLastCopyLabel()).toBeUndefined();
   });
 
+  it("does not update last-copy metadata when a copy fails", async () => {
+    const clipboard = {
+      async writeText(_text: string) {},
+    } satisfies Pick<Clipboard, "writeText">;
+
+    const before = Date.now();
+    await copyTextToClipboard(clipboard, "secret", CLIPBOARD_TIMEOUT_MS, "before");
+
+    const prevLabel = getLastCopyLabel();
+    const prevAt = getLastCopyAt();
+    expect(prevLabel).toBe("before");
+    expect(prevAt).toBeGreaterThanOrEqual(before);
+
+    // A failed copy (no modern API, no fallback available) must not touch the
+    // stored metadata from the most recent successful copy.
+    vi.stubGlobal("document", { createElement: vi.fn(), body: null });
+    const failed = await copyTextToClipboard(undefined, "secret", CLIPBOARD_TIMEOUT_MS, "after");
+
+    expect(failed).toBe(false);
+    expect(getLastCopyLabel()).toBe("before");
+    expect(getLastCopyAt()).toBe(prevAt!);
+  });
+
 }); // copyTextToClipboard describe block closes here
 
 describe("probeClipboard", () => {
@@ -955,6 +978,19 @@ describe("probeClipboard", () => {
     const result = await probeClipboard();
 
     expect(result).toBe(true);
+  });
+
+  it("probes with an empty string payload (probe must not write user data)", async () => {
+    const writeTextSpy = vi.fn(async (_text: string) => {});
+    vi.stubGlobal("navigator", {
+      clipboard: { writeText: writeTextSpy },
+    });
+
+    const result = await probeClipboard();
+
+    expect(result).toBe(true);
+    expect(writeTextSpy).toHaveBeenCalledTimes(1);
+    expect(writeTextSpy).toHaveBeenCalledWith("");
   });
 
   it("returns false when navigator.clipboard is undefined (no API)", async () => {

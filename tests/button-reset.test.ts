@@ -507,6 +507,25 @@ describe("scheduleButtonReset", () => {
     expect(isResetScheduled(fresh)).toBe(false);
   });
 
+  it ("returns without cancelling a pre-existing schedule when reset is not a function (guard runs before clear)", () => {
+    // Guard-placement contract: the `typeof reset !== "function"` early-return
+    // happens BEFORE cancelButtonReset, so a non-function reset must leave any
+    // pre-existing pending schedule intact — still pending, still fires on its
+    // own time. Mirrors the ±Infinity guard-ordering test above.
+    const target = { id: "non-fn-preserves" };
+    const reset = vi.fn();
+    scheduleButtonReset(target, 100, reset);
+    expect(isResetScheduled(target)).toBe(true);
+
+    scheduleButtonReset(target, 100, null as any); // non-function reset → early return
+
+    expect(isResetScheduled(target)).toBe(true); // old schedule preserved
+
+    vi.advanceTimersByTime(100);
+    expect(reset).toHaveBeenCalledTimes(1); // original reset still fires on its own time
+    expect(isResetScheduled(target)).toBe(false);
+  });
+
   it ("ensures cleanup occurs even if the reset function throws", () => {
     const target = { id: "test" };
     const reset = vi.fn(() => {

@@ -171,6 +171,36 @@ describe("generatePassword", () => {
     }
   });
 
+  it("ambiguity-free fallback injection uses ambiguity-free class sets when retries are exhausted", () => {
+    // maxRetries: 0 forces generateDiverse straight into the injectMissingClasses
+    // fallback, and minClassesPerPassword: 3 with a lowercase-only base guarantees
+    // that BOTH uppercase and digit injection runs. The script maps base draws to
+    // 'a' (lowercase index in the ambiguity-free charset) and injection draws to
+    // index 0 of each class set — 'A' for uppercase, '2' for digits. If the fallback
+    // used the unfiltered class sets, the injected digit would be '0' (ambiguous).
+    const script: number[] = [];
+    for (const L of LENGTHS) {
+      for (let i = 0; i < L; i++) script.push(24); // base: all 'a' (lowercase only)
+      script.push(0, 0); // inject uppercase at index 0 -> 'A'
+      script.push(1, 0); // inject digit at index 1 -> '2' ('0' if not ambiguity-filtered)
+    }
+    const getCalls = installCryptoMock(script);
+    const AMBIGUOUS = new Set(["0", "O", "l", "I", "1"]);
+    const passwords = generateAll(1, { ambiguityFree: true, minClassesPerPassword: 3, maxRetries: 0 });
+    expect(passwords).toHaveLength(LENGTHS.length);
+    passwords.forEach((pw, i) => {
+      expect(pw).toHaveLength(LENGTHS[i]);
+      // Fallback-injected characters must come from ambiguity-free class sets
+      expect([...pw].every(c => !AMBIGUOUS.has(c))).toBe(true);
+      // Forced missing classes were injected at the scripted positions
+      expect(pw[0]).toBe("A");
+      expect(pw[1]).toBe("2");
+      expect(/[a-z]/.test(pw)).toBe(true);
+    });
+    // No retry-loop draws consumed: fallback ran exactly once per slot with no rejection resampling
+    expect(getCalls()).toBe(LENGTHS.reduce((sum, L) => sum + L + 4, 0));
+  });
+
   it("generates ambiguity-free passwords when ambiguityFree option is true", () => {
     const passwords = generateAll(5, { ambiguityFree: true });
     for (const pw of passwords) {
