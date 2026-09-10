@@ -518,6 +518,14 @@ describe("username generation", () => {
       expect(validateUsername("Clever__Otter_4821")).toBe(false);
     });
 
+    it("rejects mixed-case words (neither Capitalized nor all-lowercase)", () => {
+      // Each word alternative is exactly [A-Z][a-z]+ or [a-z]+ — a word
+      // that mixes casing styles (e.g. "oTter") must not match either.
+      expect(validateUsername("Clever_oTter_4821")).toBe(false);
+      expect(validateUsername("Clever_OTTER_4821")).toBe(false);
+      expect(validateUsername("cLever_otter_4821")).toBe(false);
+    });
+
     it("accepts a two-part username without the optional number suffix", () => {
       // The suffix group in the validation regex is optional — a
       // Capitalized_Title or all-lowercase Adjective_Noun (no number) is valid.
