@@ -742,4 +742,47 @@ describe("getSecureRandomInt", () => {
       expect(callCount).toBe(rejectionWidth + 1);
     }
   });
+
+  it("invokes getRandomValues with the crypto object as this (bind contract)", () => {
+    // Production binds getRandomValues to the crypto object before sampling
+    // (crypto-utils.ts) — native Web Crypto throws "Illegal invocation" when
+    // called with a different receiver. This pins the receiver contract across
+    // every sampling attempt; value/call-count tests alone would pass with an
+    // unbound plain mock even though native crypto would break.
+    const realCrypto = (globalThis as any).crypto;
+    const seenReceivers: unknown[] = [];
+    const cryptoObj = {
+      getRandomValues(this: unknown, arr: Uint32Array) {
+        if (this !== cryptoObj) {
+          throw new TypeError("Illegal invocation");
+        }
+        seenReceivers.push(this);
+        if (seenReceivers.length <= 2) {
+          arr[0] = 0xFFFFFFFF; // rejected — above threshold for range=7
+        } else {
+          arr[0] = 0x10; // accepted — 0x10 % 7 === 2
+        }
+        return arr;
+      },
+    };
+    Object.defineProperty(globalThis, "crypto", {
+      value: cryptoObj,
+      configurable: true,
+      writable: true,
+    });
+    try {
+      const result = getSecureRandomInt(7);
+      expect(result).toBe(2);
+      expect(seenReceivers.length).toBe(3); // one sampling call per attempt, all with the bound receiver
+      for (const receiver of seenReceivers) {
+        expect(receiver).toBe(cryptoObj);
+      }
+    } finally {
+      Object.defineProperty(globalThis, "crypto", {
+        value: realCrypto,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
 });
