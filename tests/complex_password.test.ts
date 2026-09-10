@@ -250,6 +250,13 @@ describe("getSecureRandomInt", () => {
     expect(val).toBeGreaterThanOrEqual(0);
   });
 
+  it("should reject max above UINT32_MODULUS (exclusive upper bound)", () => {
+    // Companion to the acceptance test above: the guard rejects
+    // max > UINT32_MODULUS with the exact contract message, pinning the
+    // exclusive upper boundary in this file.
+    expect(() => getSecureRandomInt(UINT32_MODULUS + 1)).toThrow("Max must be between 1 and UINT32_MODULUS");
+  });
+
   describe("generateComplexPassword", () => {
     it("should generate a password of the correct length", () => {
       const length = 10;
