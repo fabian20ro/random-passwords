@@ -980,6 +980,19 @@ describe("probeClipboard", () => {
     expect(result).toBe(true);
   });
 
+  it("probes with an empty string payload (probe must not write user data)", async () => {
+    const writeTextSpy = vi.fn(async (_text: string) => {});
+    vi.stubGlobal("navigator", {
+      clipboard: { writeText: writeTextSpy },
+    });
+
+    const result = await probeClipboard();
+
+    expect(result).toBe(true);
+    expect(writeTextSpy).toHaveBeenCalledTimes(1);
+    expect(writeTextSpy).toHaveBeenCalledWith("");
+  });
+
   it("returns false when navigator.clipboard is undefined (no API)", async () => {
     vi.unstubAllGlobals();
 
