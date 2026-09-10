@@ -526,6 +526,27 @@ describe("scheduleButtonReset", () => {
     expect(isResetScheduled(target)).toBe(false);
   });
 
+  it ("preserves the pending schedule when reset is a truthy non-function object (typeof guard, not truthiness)", () => {
+    // Distinct input class from the undefined/null/string guard tests: a truthy
+    // non-function ({}) must still trip the typeof guard and early-return before
+    // cancelButtonReset. A truthiness-based guard would accept this value and
+    // schedule a non-callable callback — the original reset would then be
+    // cancelled and never fire at its own time.
+    const target = { id: "obj-reset" };
+    const reset = vi.fn();
+    scheduleButtonReset(target, 120, reset);
+    expect(isResetScheduled(target)).toBe(true);
+
+    scheduleButtonReset(target, 120, { not: "a function" } as any);
+
+    expect(isResetScheduled(target)).toBe(true);
+    vi.advanceTimersByTime(119);
+    expect(reset).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(reset).toHaveBeenCalledTimes(1); // original reset still fires at its own time
+    expect(isResetScheduled(target)).toBe(false);
+  });
+
   it ("ensures cleanup occurs even if the reset function throws", () => {
     const target = { id: "test" };
     const reset = vi.fn(() => {

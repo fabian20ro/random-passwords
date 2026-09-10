@@ -157,6 +157,23 @@ describe("generatePassword", () => {
     }
   });
 
+  it("clamps non-positive minClassesPerPassword to 0 so no diversity is enforced", () => {
+    // minClassesPerPassword is clamped via Math.min(3, Math.max(0, v)). A
+    // non-positive value means zero required classes. Zeroed crypto makes the
+    // base generator emit 'A' (CHARS index 0) for every slot — a single-class
+    // password that must be accepted as-is when the minimum is 0. If non-positive
+    // values were instead treated as the default (2), the fallback would inject
+    // a second class and the all-'A' output would not hold.
+    for (const min of [0, -5]) {
+      installCryptoMock(new Array(400).fill(0));
+      const passwords = generateAll(1, { minClassesPerPassword: min, maxRetries: 0 });
+      expect(passwords).toHaveLength(LENGTHS.length);
+      for (let i = 0; i < LENGTHS.length; i++) {
+        expect(passwords[i]).toBe("A".repeat(LENGTHS[i]));
+      }
+    }
+  });
+
   it("injectMissingClasses tracks per-class slots to prevent cross-class overwrite", () => {
     // Force many retries exhausted so the fallback path runs reliably; verify that
     // when multiple classes are injected, each class occupies a distinct slot.
