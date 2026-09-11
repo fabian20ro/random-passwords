@@ -603,6 +603,15 @@ describe("generateComplexPassword", () => {
     expect(pw).toBe("");
   });
 
+  it("throws an error when length exceeds MAX_LENGTH", () => {
+    // Guard clause: length > MAX_LENGTH must throw before any sampling,
+    // matching the same contract in generatePassword/generatePasswordWithCharset.
+    const categories = [["abc"], ["123"]];
+    expect(() => generateComplexPassword(MAX_LENGTH + 1, categories)).toThrow(
+      `Length exceeds maximum allowed: ${MAX_LENGTH}`,
+    );
+  });
+
   it("verifies complex passwords for character set compliance", () => {
     const categories = [["abc"], ["123"], ["!@#"]];
     const length = 20;
