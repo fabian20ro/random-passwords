@@ -61,6 +61,16 @@ describe("getSecureRandomInt", () => {
       expect(() => getSecureRandomInt(10, 2.5)).toThrow("Min must be a non-negative integer");
     });
 
+    it("throws if min is NaN or Infinity (non-finite values)", () => {
+      // The guard `min < 0 || !Number.isInteger(min)` must reject non-finite
+      // min values with the same guard message, before crypto is consulted.
+      // Existing min throw tests only cover -1, 0.5, and 2.5 — this pins the
+      // NaN / ±Infinity branch of the guard.
+      expect(() => getSecureRandomInt(10, NaN)).toThrow("Min must be a non-negative integer");
+      expect(() => getSecureRandomInt(10, Infinity)).toThrow("Min must be a non-negative integer");
+      expect(() => getSecureRandomInt(10, -Infinity)).toThrow("Min must be a non-negative integer");
+    });
+
     it("handles min=0, max=max correctly (boundary)", () => {
       const val = getSecureRandomInt(100, 0);
       expect(val).toBeGreaterThanOrEqual(0);
