@@ -466,6 +466,34 @@ describe("copyTextToClipboard", () => {
     expect(setAttributeSpy.mock.calls.filter(([name]: [string]) => name !== "readonly")).toEqual([]);
   });
 
+  it("keeps the fallback textarea off-screen via absolute positioning", async () => {
+    let capturedEl: unknown = null;
+
+    vi.stubGlobal("document", createFallbackStub({
+      createElement: (tag: string) => {
+        const el: Record<string, any> = {
+          value: "",
+          setAttribute: vi.fn(),
+          tabIndex: undefined as number | undefined,
+          style: { position: "", left: "" },
+          select: vi.fn(),
+          setSelectionRange: vi.fn((_start: number, _end: number) => {}),
+        };
+        capturedEl = el;
+        return el as unknown as HTMLTextAreaElement;
+      },
+    }));
+
+    await copyTextToClipboard(undefined, "secret");
+
+    // The fallback must move the textarea off-screen so the user never sees
+    // it. If either style assignment is dropped, the textarea renders visibly
+    // in the page while copying — no existing test asserts these values.
+    const style = (capturedEl as any).style;
+    expect(style.position).toBe("absolute");
+    expect(style.left).toBe("-9999px");
+  });
+
   it("returns false when neither clipboard API nor document available", async () => {
     // Unstub any leftover global mocks to simulate a real Node.js env with no DOM
     vi.unstubAllGlobals();
