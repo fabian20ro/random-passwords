@@ -257,6 +257,19 @@ describe("getSecureRandomInt", () => {
     expect(() => getSecureRandomInt(UINT32_MODULUS + 1)).toThrow("Max must be between 1 and UINT32_MODULUS");
   });
 
+  it("enforces the min-parameter guard (negative, non-integer, min>=max)", () => {
+    // Production contract (src/crypto-utils.ts): min validation is a distinct
+    // guard from max validation, unreachable by any single-argument call above.
+    // Pin the exact contract messages so a regression that drops any min check
+    // (negative, non-integer, or min>=max) fails specifically here.
+    expect(() => getSecureRandomInt(10, -1)).toThrow("Min must be a non-negative integer");
+    expect(() => getSecureRandomInt(10, -100)).toThrow("Min must be a non-negative integer");
+    expect(() => getSecureRandomInt(10, 1.5)).toThrow("Min must be a non-negative integer");
+    expect(() => getSecureRandomInt(10, NaN)).toThrow("Min must be a non-negative integer");
+    expect(() => getSecureRandomInt(10, 10)).toThrow("Min must be less than max");
+    expect(() => getSecureRandomInt(10, 11)).toThrow("Min must be less than max");
+  });
+
   describe("generateComplexPassword", () => {
     it("should generate a password of the correct length", () => {
       const length = 10;
