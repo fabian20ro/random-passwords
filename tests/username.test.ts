@@ -532,5 +532,13 @@ describe("username generation", () => {
       expect(validateUsername("Clever_Otter")).toBe(true);
       expect(validateUsername("clever_otter")).toBe(true);
     });
+
+    it("rejects a username whose first part is digits", () => {
+      // The first alternative is [A-Z][a-z]+ or [a-z]+ — a digit-led first
+      // part matches neither, unlike the number suffix which is digit-only.
+      // No existing test exercises the first part in the digit position.
+      expect(validateUsername("1234_Otter")).toBe(false);
+      expect(validateUsername("1234_Otter_4821")).toBe(false);
+    });
   });
 });
