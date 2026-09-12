@@ -176,6 +176,31 @@ describe("getSecureRandomInt", () => {
     }
   });
 
+  it("produces approximately uniform distribution with positive min offset", () => {
+    // All statistical tests above use min=0, and the min tests only assert
+    // range membership. This pins bias-freeness of the min + (buf[0] % range)
+    // mapping under real crypto: max=10, min=3 → range=7 over 7 buckets.
+    const c = globalThis.crypto as any;
+    if (!c || typeof c.getRandomValues !== "function") return;
+
+    const min = 3;
+    const max = 10;
+    const range = max - min; // 7
+    const buckets = new Array(range).fill(0);
+    for (let i = 0; i < 5000; i++) {
+      const val = getSecureRandomInt(max, min);
+      expect(val).toBeGreaterThanOrEqual(min);
+      expect(val).toBeLessThan(max);
+      buckets[val - min]++;
+    }
+    // Each bucket should receive ~714 samples (5000/7) within 4σ tolerance.
+    const expected = 5000 / range;
+    const tolerance = 4 * Math.sqrt(expected);
+    for (const count of buckets) {
+      expect(Math.abs(count - expected)).toBeLessThan(tolerance);
+    }
+  });
+
   it("throws if max is NaN (non-numeric)", () => {
     expect(() => getSecureRandomInt(NaN)).toThrow("Max must be between 1 and UINT32_MODULUS");
   });
