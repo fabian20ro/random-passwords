@@ -585,6 +585,33 @@ describe("copyTextToClipboard", () => {
     expect(capturedValue).toBe("secret");
   });
 
+  it("selects the entire fallback textarea range before copying (setSelectionRange(0, value.length))", async () => {
+    let capturedEl: unknown = null;
+
+    vi.stubGlobal("document", createFallbackStub({
+      createElement: (tag: string) => {
+        const el: Record<string, any> = {
+          value: "",
+          setAttribute: vi.fn(),
+          tabIndex: undefined as number | undefined,
+          style: { position: "", left: "" },
+          select: vi.fn(),
+          setSelectionRange: vi.fn((_start: number, _end: number) => {}),
+        };
+        capturedEl = el;
+        return el as unknown as HTMLTextAreaElement;
+      },
+    }));
+
+    await copyTextToClipboard(undefined, "secret");
+
+    // The fallback must select the full value range before execCommand("copy") —
+    // with no selection, execCommand may copy nothing or only a partial value.
+    // No existing test asserts the selection range arguments.
+    const setSelectionRangeSpy = (capturedEl as any).setSelectionRange;
+    expect(setSelectionRangeSpy).toHaveBeenCalledWith(0, "secret".length);
+  });
+
   it("does not invoke fallback when modern clipboard API succeeds", async () => {
     const appendChildSpy = vi.fn();
     vi.stubGlobal("document", {

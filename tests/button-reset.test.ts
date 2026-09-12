@@ -1457,6 +1457,46 @@ describe("cancelButtonReset", () => {
       cancelButtonReset(target); // cancels second schedule → hook fires again
       expect(cancelCount).toBe(2);
     });
+
+    it ("observes cleared timeout state but still-visible description while the onCancel hook runs", () => {
+      // Contract under test: cancelButtonReset clears the timeout entry
+      // (clearTimeout + resetTimeouts.delete) BEFORE firing the hook, but
+      // deletes the hook and description AFTER it — the source comment says
+      // the caller may still reference the description after cancellation,
+      // so this ordering is intentional. Existing hook tests only assert
+      // final state and fire counts; none observe what the hook itself sees.
+      const target = { id: "onCancel-observes-cleanup" };
+      const reset = vi.fn();
+      let seenScheduledDuringHook: boolean | undefined;
+      let seenTimeoutEntryDuringHook: boolean | undefined;
+      let seenDescriptionDuringHook: string | undefined;
+
+      scheduleButtonReset(target, 200, reset, "observed-desc", () => {
+        seenScheduledDuringHook = isResetScheduled(target);
+        seenTimeoutEntryDuringHook = resetTimeouts.has(target);
+        seenDescriptionDuringHook = getResetDescription(target);
+      });
+
+      expect(isResetScheduled(target)).toBe(true);
+      expect(getResetDescription(target)).toBe("observed-desc");
+
+      const result = cancelButtonReset(target);
+
+      expect(result).toBe(true);
+      // Timeout state is already cleared when the hook runs.
+      expect(seenScheduledDuringHook).toBe(false);
+      expect(seenTimeoutEntryDuringHook).toBe(false);
+      // Description cleanup is deferred past the hook — still visible inside it.
+      expect(seenDescriptionDuringHook).toBe("observed-desc");
+
+      // After the call returns, everything is cleared — the description the
+      // hook saw is gone, and no timer survives to fire.
+      expect(isResetScheduled(target)).toBe(false);
+      expect(resetTimeouts.has(target)).toBe(false);
+      expect(getResetDescription(target)).toBeUndefined();
+      vi.advanceTimersByTime(500);
+      expect(reset).not.toHaveBeenCalled();
+    });
   });
 
   describe("cancelButtonReset direct contract", () => {

@@ -236,12 +236,16 @@ describe("getSecureRandomInt", () => {
   });
 
   it("should throw on non-integer input", () => {
-    expect(() => getSecureRandomInt(1.5)).toThrow();
-    expect(() => getSecureRandomInt(NaN)).toThrow();
+    // Exact contract message from the max guard in src/crypto-utils.ts —
+    // same guard family as the exclusive-upper-bound test below; pinning the
+    // message here makes a regression that changes or drops the guard
+    // fail specifically on these inputs rather than any throw.
+    expect(() => getSecureRandomInt(1.5)).toThrow("Max must be between 1 and UINT32_MODULUS");
+    expect(() => getSecureRandomInt(NaN)).toThrow("Max must be between 1 and UINT32_MODULUS");
   });
 
   it("should throw on max=0 (boundary violation)", () => {
-    expect(() => getSecureRandomInt(0)).toThrow();
+    expect(() => getSecureRandomInt(0)).toThrow("Max must be between 1 and UINT32_MODULUS");
   });
 
   it("should accept max=UINT32_MODULUS without error", () => {
