@@ -540,5 +540,14 @@ describe("username generation", () => {
       expect(validateUsername("1234_Otter")).toBe(false);
       expect(validateUsername("1234_Otter_4821")).toBe(false);
     });
+
+    it("rejects empty and single-word inputs (two word groups are required)", () => {
+      // The regex mandates at least two underscore-separated word groups —
+      // unlike the number suffix, which is the only optional element.
+      // No existing assertion exercises degenerate (too-short) inputs.
+      expect(validateUsername("")).toBe(false);
+      expect(validateUsername("Clever")).toBe(false);
+      expect(validateUsername("clever")).toBe(false);
+    });
   });
 });
