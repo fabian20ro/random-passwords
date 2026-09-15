@@ -42,6 +42,8 @@ Obsolete lessons → Archive section at bottom (with date and reason). Never del
 
 ## Performance & Infrastructure
 
+**[2026-09-15] Verify icon URLs after build** — Vite rewrites public `/favicon.svg` and `/safari-pinned-tab.svg` links under the configured `/random-passwords/` base. Check built HTML and served assets; source-only existence tests do not prove deployment paths.
+
 
 <!-- Format: **[YYYY-MM-DD]** Brief title — Explanation -->
 

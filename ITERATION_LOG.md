@@ -266,3 +266,11 @@
 **Outcome:** `npm run check` passed (518 tests, type checking, build). Production preview checked at desktop, 390px and 320px: checked first load, label/Space toggling, visible keyboard focus, selection preserved on Regenerate, no horizontal overflow, all ten filtered passwords exclude ambiguous characters. Local branch commit; deployment remains the normal integration workflow.
 **Insight:** Visible default preferences belong in semantic HTML; test initial rendering and change-event wiring, not only the generator function.
 **Promoted to Lessons Learned:** Yes
+
+### [2026-09-15] Recognizable tab and pinned-tab icons
+
+**Context:** User requested a recognizable icon for pinned browser tabs.
+**What happened:** Added a high-contrast lock SVG and monochrome Safari mask; explicit same-origin HTML links. No runtime dependencies, fonts, inline data URLs, or CSP relaxation. Added a regression proving both links resolve to self-contained local assets.
+**Outcome:** New test failed before the assets/links existed, then `npm run check` passed with 519 tests, type checking and production build. Built URLs retain `/random-passwords/`; both served as HTTP 200 `image/svg+xml`. Browser artwork checked at 16px and 32px on light/dark backgrounds, plus 16px monochrome mask. Native Safari pinned-tab chrome not available for direct validation. Commit/push targets existing Compound branch; no merge/deployment claimed.
+**Insight:** Vite public icon links must be verified in built HTML, because the deployed site lives under a non-root base path.
+**Promoted to Lessons Learned:** Yes
