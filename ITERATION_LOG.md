@@ -256,3 +256,13 @@
 **Outcome:** Success. Lint, all 396 tests, and the production build passed; deployment and GitHub control-plane checks continue outside the source iteration.
 **Insight:** A repository replacement requires both Git ref migration and explicit restoration of GitHub-hosted settings.
 **Promoted to Lessons Learned:** Yes
+
+---
+
+### [2026-09-15] Ambiguity-free UI default and accessible option row
+
+**Context:** User requested ambiguity exclusion enabled on first load and repair of the unstyled checkbox/label.
+**What happened:** Moved the native checkbox into static HTML with checked default and responsive, full-row label styling. Changes regenerate immediately; all retained generation paths receive the same option. Generator API defaults and cryptographic sampling remain unchanged. Added three entry-point regressions before implementation; all failed on the original behavior. Corrected a test fixture to use DEFAULT_LENGTH rather than a guessed value.
+**Outcome:** `npm run check` passed (518 tests, type checking, build). Production preview checked at desktop, 390px and 320px: checked first load, label/Space toggling, visible keyboard focus, selection preserved on Regenerate, no horizontal overflow, all ten filtered passwords exclude ambiguous characters. Local branch commit; deployment remains the normal integration workflow.
+**Insight:** Visible default preferences belong in semantic HTML; test initial rendering and change-event wiring, not only the generator function.
+**Promoted to Lessons Learned:** Yes

@@ -22,6 +22,32 @@
   h1 { margin-bottom: 1.5rem; font-size: 1.6rem; }
   h2 { margin-top: 1.25rem; margin-bottom: 0.75rem; font-size: 1.2rem; }
   .passwords { display: flex; flex-direction: column; gap: 0.75rem; width: 100%; max-width: 620px; }
+  .password-option {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    max-width: 620px;
+    min-height: 44px;
+    margin-bottom: 1rem;
+    padding: 0.75rem 0.9rem;
+    border: 1px solid #29456a;
+    border-radius: 8px;
+    background: #16213e;
+    color: #cad8e8;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    cursor: pointer;
+  }
+  .password-option input {
+    flex: none;
+    width: 1.15rem;
+    height: 1.15rem;
+    accent-color: #a8d8ea;
+    color-scheme: dark;
+  }
+  .password-option input:focus-visible { outline: 2px solid #a8d8ea; outline-offset: 3px; }
+  .password-option span { min-width: 0; }
   .row {
     display: flex;
     align-items: center;
@@ -90,6 +116,10 @@
 <body>
 
 <h1>Random Passwords</h1>
+<label class="password-option" for="no-ambiguous">
+  <input type="checkbox" id="no-ambiguous" checked>
+  <span>Exclude ambiguous characters (0, O, 1, I, l)</span>
+</label>
 <div class="passwords" id="passwords"></div>
 <h2>Usernames</h2>
 <div class="passwords" id="usernames"></div>
