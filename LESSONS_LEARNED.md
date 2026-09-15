@@ -42,6 +42,8 @@ Obsolete lessons → Archive section at bottom (with date and reason). Never del
 
 ## Performance & Infrastructure
 
+**[2026-09-15] Verify icon URLs after build** — Vite rewrites public `/favicon.svg` and `/safari-pinned-tab.svg` links under the configured `/random-passwords/` base. Check built HTML and served assets; source-only existence tests do not prove deployment paths.
+
 
 <!-- Format: **[YYYY-MM-DD]** Brief title — Explanation -->
 
@@ -52,6 +54,8 @@ Obsolete lessons → Archive section at bottom (with date and reason). Never del
 <!-- Format: **[YYYY-MM-DD]** Brief title — Explanation -->
 
 ## Process & Workflow
+
+**[2026-09-15] Test the visible default and event wiring** — Generator unit tests cannot catch an unchecked UI default or a missing change handler. Keep static preference controls in semantic HTML, pass one option to every generation path, and verify initial load, toggle, Regenerate, and mobile layout.
 
 **[2026-05-13] Document newly visible UI interactions in README — When a shipped screen adds a concrete affordance like copy-to-clipboard with status feedback, a short README line keeps the public surface aligned with the app.
 **[2026-05-16] Document repeated-row metadata in README — When the UI shows a per-item label or count alongside a repeated list, name that row-level metadata in the README too so the public surface matches the shipped affordance, not just the aggregate summary.

@@ -25,25 +25,7 @@ const CATEGORY_DEFS: { id: string; label: string; chars: string }[] = [
   { id: "digits", label: "Digits (0-9)", chars: CHARSET_UPPER_LOWER_DIGIT.substring(52) },
 ];
 
-const NO_AMBIGUOUS_LABEL_TEXT = "Exclude ambiguous characters (0, O, 1, I, l)";
-
-function createNoAmbiguousControl(): HTMLInputElement | null {
-  const list = document.getElementById("passwords");
-  const anchor = list?.parentElement;
-  if (!anchor || !list) return null;
-
-  const checkbox = document.createElement("input");
-  checkbox.type = "checkbox";
-  checkbox.id = "no-ambiguous";
-
-  const label = document.createElement("label");
-  label.appendChild(checkbox);
-  label.appendChild(document.createTextNode(` ${NO_AMBIGUOUS_LABEL_TEXT}`));
-  anchor.insertBefore(label, list);
-  return checkbox;
-}
-
-const noAmbiguousCheckbox = createNoAmbiguousControl();
+const noAmbiguousCheckbox = document.getElementById("no-ambiguous") as HTMLInputElement | null;
 
 const statusEl = document.getElementById("status") as HTMLParagraphElement;
 if (statusEl) statusEl.setAttribute("role", "status");
@@ -147,6 +129,7 @@ function generate(): void {
     const usernameContainer = document.getElementById("usernames") as HTMLDivElement;
 
     const categories = getSelectedCategories();
+    const options = { ambiguityFree: noAmbiguousCheckbox?.checked ?? true };
     let passwords: string[];
 
     if (categories.length > 0) {
@@ -156,14 +139,14 @@ function generate(): void {
       // rendering duplicate output.
       const complexLen = DEFAULT_LENGTH;
       if (categories.length === 1) {
-        passwords = [generateComplexPassword(complexLen, categories)].filter(pw => pw.length > 0);
+        passwords = [generateComplexPassword(complexLen, categories, options)].filter(pw => pw.length > 0);
       } else {
-        const categoryPasswords = categories.map(cat => generateComplexPassword(complexLen, [cat]));
-        const combined = generateComplexPassword(complexLen, categories);
+        const categoryPasswords = categories.map(cat => generateComplexPassword(complexLen, [cat], options));
+        const combined = generateComplexPassword(complexLen, categories, options);
         passwords = [...categoryPasswords, combined].filter(pw => pw.length > 0);
       }
     } else {
-      passwords = generateAll(1, { ambiguityFree: noAmbiguousCheckbox?.checked ?? false });
+      passwords = generateAll(1, options);
     }
 
     const usernames = generateUsernames(USERNAME_COUNT);
@@ -184,4 +167,5 @@ function generate(): void {
 }
 
 document.getElementById("regenerate")?.addEventListener("click", generate);
+noAmbiguousCheckbox?.addEventListener("change", generate);
 generate();

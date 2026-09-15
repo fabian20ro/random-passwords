@@ -9,6 +9,10 @@ Simple password generator that creates 10 cryptographically secure alphanumeric 
 Uses the [Web Crypto API](https://developer.mozilla.org/en-US/docs/Web/API/Crypto/getRandomValues) (`crypto.getRandomValues()`) — the browser's built-in CSPRNG, equivalent to Java's `SecureRandom`.
 Password characters are sampled with rejection sampling to avoid modulo bias.
 
+The page excludes visually ambiguous characters (`0`, `O`, `1`, `I`, `l`) by default.
+Uncheck the option to include them; changing it immediately regenerates the displayed
+values. Regenerate keeps the current selection. Low-level generator API defaults are unchanged.
+
 ## Usage
 
 ### Basic usage (alphanumeric)
