@@ -297,6 +297,43 @@ describe("getSecureRandomInt", () => {
     }
   });
 
+  it("re-draws (rejection sampling) when a sample lands in the rejection region", () => {
+    // Production contract (src/crypto-utils.ts): the rejection-sampling loop
+    // must re-draw whenever buf[0] >= threshold, never returning a biased
+    // sample. Existing deterministic tests (range=1, max=UINT32_MODULUS, and
+    // the raw-uint32 mapping test) only exercise the zero-rejection
+    // degenerate path — no test feeds a sample in the rejection region.
+    // For max=3 (range=3), threshold = UINT32_MODULUS - (UINT32_MODULUS % 3)
+    // = 0xFFFFFFFF, so only 0xFFFFFFFF is rejected. Feeding
+    // [0xFFFFFFFF, 5] must trigger exactly one re-draw and return the
+    // mapping of the accepted sample (5 % 3 === 2). A regression that drops
+    // or inverts the threshold check would return on the first draw (1 call,
+    // result 0) and fail both assertions here.
+    const realCrypto = (globalThis as any).crypto;
+    const samples = [0xffffffff, 5];
+    let calls = 0;
+    Object.defineProperty(globalThis, "crypto", {
+      value: {
+        getRandomValues(arr: Uint32Array) {
+          arr[0] = samples[calls++ % samples.length];
+          return arr;
+        },
+      },
+      configurable: true,
+      writable: true,
+    });
+    try {
+      expect(getSecureRandomInt(3)).toBe(2);
+      expect(calls).toBe(2);
+    } finally {
+      Object.defineProperty(globalThis, "crypto", {
+        value: realCrypto,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
+
   describe("generateComplexPassword", () => {
     it("should generate a password of the correct length", () => {
       const length = 10;
