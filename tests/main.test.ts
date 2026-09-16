@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { DEFAULT_LENGTH, generateAll, generateComplexPassword } from "../src/password";
 import { scheduleButtonReset } from "../src/button-reset";
+import { copyTextToClipboard } from "../src/clipboard";
 
 vi.mock("../src/password", async (original) => ({
   ...await original<typeof import("../src/password")>(),
@@ -88,4 +89,19 @@ it("schedules the copy-button reset with COPY_BUTTON_RESET_MS after a successful
   const btn = created.find((el) => el.className === "copy-btn")!;
   await btn.onclick?.();
   expect(scheduleButtonReset).toHaveBeenLastCalledWith(btn, main.COPY_BUTTON_RESET_MS, expect.any(Function));
+});
+
+it("announces copy failure and schedules the reset after 2000 ms", async () => {
+  await import("../src/main");
+  vi.mocked(copyTextToClipboard).mockResolvedValue(false);
+  const btn = created.find((el) => el.className === "copy-btn")!;
+  await btn.onclick?.();
+  const status = elements.get("status")!;
+  expect(copyTextToClipboard).toHaveBeenLastCalledWith(undefined, "safe");
+  expect(status.textContent).toBe("Copy failed. Clipboard access unavailable or denied.");
+  expect(status.style.color).toBe("var(--error-color, #e74c3c)");
+  expect(elements.get("sr-status")!.textContent).toBe(
+    "Copy failed. Clipboard access unavailable or denied.",
+  );
+  expect(scheduleButtonReset).toHaveBeenLastCalledWith(btn, 2000, expect.any(Function));
 });
