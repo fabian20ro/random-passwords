@@ -125,3 +125,15 @@ it("announces a generation error when password generation throws", async () => {
   expect(status.style.color).toBe("var(--error-color, #e74c3c)");
   expect(elements.get("sr-status")!.textContent).toBe("boom");
 });
+
+it("announces complex generation with the selected category labels", async () => {
+  const upper = new Element(); upper.checked = true;
+  const lower = new Element(); lower.checked = true;
+  elements.set("cat-upper", upper);
+  elements.set("cat-lower", lower);
+  await import("../src/main");
+  expect(generateComplexPassword).toHaveBeenCalledTimes(3);
+  expect(elements.get("status")!.textContent).toBe(
+    "Generated 3 complex passwords using Uppercase (A-Z), Lowercase (a-z).",
+  );
+});
