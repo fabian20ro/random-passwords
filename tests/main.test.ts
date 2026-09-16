@@ -91,6 +91,14 @@ it("schedules the copy-button reset with COPY_BUTTON_RESET_MS after a successful
   expect(scheduleButtonReset).toHaveBeenLastCalledWith(btn, main.COPY_BUTTON_RESET_MS, expect.any(Function));
 });
 
+it("announces the copy success to the visible and screen-reader status", async () => {
+  await import("../src/main");
+  const btn = created.find((el) => el.className === "copy-btn")!;
+  await btn.onclick?.();
+  expect(elements.get("status")!.textContent).toBe("Value copied to clipboard.");
+  expect(elements.get("sr-status")!.textContent).toBe("Value copied to clipboard.");
+});
+
 it("announces copy failure and schedules the reset after 2000 ms", async () => {
   await import("../src/main");
   vi.mocked(copyTextToClipboard).mockResolvedValue(false);
