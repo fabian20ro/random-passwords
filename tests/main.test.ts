@@ -105,3 +105,15 @@ it("announces copy failure and schedules the reset after 2000 ms", async () => {
   );
   expect(scheduleButtonReset).toHaveBeenLastCalledWith(btn, 2000, expect.any(Function));
 });
+
+it("announces a generation error when password generation throws", async () => {
+  await import("../src/main");
+  vi.mocked(generateAll).mockImplementation(() => {
+    throw new Error("boom");
+  });
+  elements.get("regenerate")!.fire("click");
+  const status = elements.get("status")!;
+  expect(status.textContent).toBe("boom");
+  expect(status.style.color).toBe("var(--error-color, #e74c3c)");
+  expect(elements.get("sr-status")!.textContent).toBe("boom");
+});
