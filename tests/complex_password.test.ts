@@ -274,6 +274,29 @@ describe("getSecureRandomInt", () => {
     expect(() => getSecureRandomInt(10, 11)).toThrow("Min must be less than max");
   });
 
+  it("throws the exact crypto-unavailable message when getRandomValues is missing", () => {
+    // Production contract (src/crypto-utils.ts): after the max/min guards
+    // pass, the crypto guard is the third fail-fast check — it must reject
+    // with its own distinct message rather than the max/min messages.
+    // Existing tests in this file only pin the max/min guard messages; this
+    // pins the crypto branch's full message for a valid (max, min) pair.
+    const realCrypto = (globalThis as any).crypto;
+    Object.defineProperty(globalThis, "crypto", {
+      value: {},
+      configurable: true,
+      writable: true,
+    });
+    try {
+      expect(() => getSecureRandomInt(10, 0)).toThrow("Crypto API unavailable — cannot generate secure random values");
+    } finally {
+      Object.defineProperty(globalThis, "crypto", {
+        value: realCrypto,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
+
   describe("generateComplexPassword", () => {
     it("should generate a password of the correct length", () => {
       const length = 10;
