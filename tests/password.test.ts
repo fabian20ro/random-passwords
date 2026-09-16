@@ -832,6 +832,15 @@ describe("password constants", () => {
     expect(pw).toHaveLength(DEFAULT_LENGTH);
   });
 
+  it("CHARSET_LEN tracks the 62 unique alphanumeric characters of CHARS", () => {
+    // CHARSET_LEN is the rejection-sampling denominator for the base charset;
+    // it must stay in lockstep with CHARS so dedup/bias invariants hold.
+    expect(CHARS).toHaveLength(62);
+    expect(new Set(CHARS).size).toBe(CHARS.length);
+    expect(CHARSET_LEN).toBe(CHARS.length);
+    expect(CHARSET_LEN).toBe(62);
+  });
+
   it("CHAR_CLASS_UPPER contains only unique uppercase letters drawn from CHARS", () => {
     expect([...CHAR_CLASS_UPPER].every(c => /^[A-Z]$/.test(c))).toBe(true);
     expect(new Set(CHAR_CLASS_UPPER).size).toBe(CHAR_CLASS_UPPER.length);
