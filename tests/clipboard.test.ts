@@ -708,6 +708,22 @@ describe("copyTextToClipboard", () => {
     expect(createElementSpy).not.toHaveBeenCalled(); // short-circuit avoids creating textarea
   });
 
+  it("returns false when document exists but createElement is not a function (no DOM manipulation)", async () => {
+    const appendChildSpy = vi.fn();
+    vi.stubGlobal("document", {
+      // Partial DOM: body is present but createElement is missing/non-callable.
+      // fallbackCopy must short-circuit before it can mount a textarea.
+      createElement: "not-a-function",
+      body: { appendChild: appendChildSpy, removeChild: vi.fn() },
+    });
+
+    const result = await copyTextToClipboard(undefined, "secret");
+
+    expect(result).toBe(false);
+    expect(appendChildSpy).not.toHaveBeenCalled(); // short-circuit before mounting textarea
+    vi.unstubAllGlobals();
+  });
+
   it("returns false when writeText hangs (timeout activates)", async () => {
     let resolveSlow: (() => void) | undefined;
     const clipboard = {
