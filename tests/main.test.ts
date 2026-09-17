@@ -91,6 +91,14 @@ it("schedules the copy-button reset with COPY_BUTTON_RESET_MS after a successful
   expect(scheduleButtonReset).toHaveBeenLastCalledWith(btn, main.COPY_BUTTON_RESET_MS, expect.any(Function));
 });
 
+it("announces the copy success to the visible and screen-reader status", async () => {
+  await import("../src/main");
+  const btn = created.find((el) => el.className === "copy-btn")!;
+  await btn.onclick?.();
+  expect(elements.get("status")!.textContent).toBe("Value copied to clipboard.");
+  expect(elements.get("sr-status")!.textContent).toBe("Value copied to clipboard.");
+});
+
 it("announces copy failure and schedules the reset after 2000 ms", async () => {
   await import("../src/main");
   vi.mocked(copyTextToClipboard).mockResolvedValue(false);
@@ -116,4 +124,31 @@ it("announces a generation error when password generation throws", async () => {
   expect(status.textContent).toBe("boom");
   expect(status.style.color).toBe("var(--error-color, #e74c3c)");
   expect(elements.get("sr-status")!.textContent).toBe("boom");
+});
+
+it("announces complex generation with the selected category labels", async () => {
+  const upper = new Element(); upper.checked = true;
+  const lower = new Element(); lower.checked = true;
+  elements.set("cat-upper", upper);
+  elements.set("cat-lower", lower);
+  await import("../src/main");
+  expect(generateComplexPassword).toHaveBeenCalledTimes(3);
+  expect(elements.get("status")!.textContent).toBe(
+    "Generated 3 complex passwords using Uppercase (A-Z), Lowercase (a-z).",
+  );
+});
+
+it("generates one combined password and skips the duplicate for a single selected category", async () => {
+  const upper = new Element(); upper.checked = true;
+  elements.set("cat-upper", upper);
+  await import("../src/main");
+  expect(generateComplexPassword).toHaveBeenCalledTimes(1);
+  expect(generateComplexPassword).toHaveBeenLastCalledWith(
+    DEFAULT_LENGTH,
+    expect.any(Array),
+    { ambiguityFree: true },
+  );
+  expect(elements.get("status")!.textContent).toBe(
+    "Generated 1 complex passwords using Uppercase (A-Z).",
+  );
 });
