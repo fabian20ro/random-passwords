@@ -369,6 +369,37 @@ describe("getSecureRandomInt", () => {
     }
   });
 
+  it("aborts with the exact exhaustion message (MAX_ATTEMPTS = 256) when every sample is rejected", () => {
+    // Production contract (src/crypto-utils.ts): the rejection-sampling loop
+    // aborts after MAX_ATTEMPTS=256 attempts with a message that embeds the
+    // attempt count. Related tests pin only the "Rejection sampling
+    // exhausted" prefix; this pins the full message so a regression that
+    // drops or rewords the "after 256 attempts" suffix (e.g., retuning
+    // MAX_ATTEMPTS) fails specifically here.
+    const realCrypto = (globalThis as any).crypto;
+    Object.defineProperty(globalThis, "crypto", {
+      value: {
+        // max=7: range=7, UINT32_MODULUS % 7 = 4, threshold = UINT32_MODULUS - 4;
+        // 0xFFFFFFFF is in the rejection region, so every draw is rejected.
+        getRandomValues(arr: Uint32Array) {
+          arr[0] = 0xffffffff;
+          return arr;
+        },
+      },
+      configurable: true,
+      writable: true,
+    });
+    try {
+      expect(() => getSecureRandomInt(7)).toThrow("Rejection sampling exhausted after 256 attempts");
+    } finally {
+      Object.defineProperty(globalThis, "crypto", {
+        value: realCrypto,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
+
   describe("generateComplexPassword", () => {
     it("should generate a password of the correct length", () => {
       const length = 10;
