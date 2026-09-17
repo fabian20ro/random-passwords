@@ -334,6 +334,72 @@ describe("getSecureRandomInt", () => {
     }
   });
 
+  it("maps the accepted sample to min + (sample % range) when min is non-zero", () => {
+    // Production contract (src/crypto-utils.ts): the return value is
+    // min + (buf[0] % range). Existing tests in this file only pin the
+    // min=0 mapping (sample 5 % 3 === 2) — the min offset is not observable
+    // from any assertion here. For max=7, min=2: range=5,
+    // threshold = UINT32_MODULUS - (UINT32_MODULUS % 5) = 0xFFFFFFFF, so
+    // 0xFFFFFFFF is rejected and 4 is accepted; 2 + (4 % 5) === 6.
+    // A regression that drops the min offset (returning sample % range)
+    // returns 4; one that drops the rejection check returns
+    // 2 + (0xFFFFFFFF % 5) === 2 with a single draw — both fail here.
+    const realCrypto = (globalThis as any).crypto;
+    const samples = [0xffffffff, 4];
+    let calls = 0;
+    Object.defineProperty(globalThis, "crypto", {
+      value: {
+        getRandomValues(arr: Uint32Array) {
+          arr[0] = samples[calls++ % samples.length];
+          return arr;
+        },
+      },
+      configurable: true,
+      writable: true,
+    });
+    try {
+      expect(getSecureRandomInt(7, 2)).toBe(6);
+      expect(calls).toBe(2);
+    } finally {
+      Object.defineProperty(globalThis, "crypto", {
+        value: realCrypto,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
+
+  it("aborts with the exact exhaustion message (MAX_ATTEMPTS = 256) when every sample is rejected", () => {
+    // Production contract (src/crypto-utils.ts): the rejection-sampling loop
+    // aborts after MAX_ATTEMPTS=256 attempts with a message that embeds the
+    // attempt count. Related tests pin only the "Rejection sampling
+    // exhausted" prefix; this pins the full message so a regression that
+    // drops or rewords the "after 256 attempts" suffix (e.g., retuning
+    // MAX_ATTEMPTS) fails specifically here.
+    const realCrypto = (globalThis as any).crypto;
+    Object.defineProperty(globalThis, "crypto", {
+      value: {
+        // max=7: range=7, UINT32_MODULUS % 7 = 4, threshold = UINT32_MODULUS - 4;
+        // 0xFFFFFFFF is in the rejection region, so every draw is rejected.
+        getRandomValues(arr: Uint32Array) {
+          arr[0] = 0xffffffff;
+          return arr;
+        },
+      },
+      configurable: true,
+      writable: true,
+    });
+    try {
+      expect(() => getSecureRandomInt(7)).toThrow("Rejection sampling exhausted after 256 attempts");
+    } finally {
+      Object.defineProperty(globalThis, "crypto", {
+        value: realCrypto,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
+
   describe("generateComplexPassword", () => {
     it("should generate a password of the correct length", () => {
       const length = 10;
