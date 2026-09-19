@@ -334,6 +334,45 @@ describe("getSecureRandomInt", () => {
     }
   });
 
+  it("rejects a sample equal to the threshold (strict < boundary of rejection sampling)", () => {
+    // Production contract (src/crypto-utils.ts): acceptance is `buf[0] <
+    // threshold` — a sample exactly equal to threshold is REJECTED and forces
+    // a re-draw. For max=7 (range=7), threshold = UINT32_MODULUS -
+    // (UINT32_MODULUS % 7) = 0xFFFFFFFC, so 0xFFFFFFFC sits exactly on the
+    // boundary. Every existing deterministic rejection test feeds samples
+    // strictly above the threshold (0xFFFFFFFF) or hits a zero-rejection
+    // degenerate; none pin the equality boundary, so a regression relaxing
+    // `<` to `<=` would be invisible to them. Feeding [0xFFFFFFFC, 5] must
+    // reject the first draw (0xFFFFFFFC == threshold) and accept the second
+    // (5), returning 5 % 7 === 5 with 2 draws. A `<`→`<=` regression accepts
+    // 0xFFFFFFFC on the first draw: threshold is a multiple of range so it
+    // maps to 0, returning 0 with 1 draw — failing both the value and the
+    // call-count assertions.
+    const realCrypto = (globalThis as any).crypto;
+    const samples = [0xfffffffc, 5];
+    let calls = 0;
+    Object.defineProperty(globalThis, "crypto", {
+      value: {
+        getRandomValues(arr: Uint32Array) {
+          arr[0] = samples[calls++ % samples.length];
+          return arr;
+        },
+      },
+      configurable: true,
+      writable: true,
+    });
+    try {
+      expect(getSecureRandomInt(7)).toBe(5);
+      expect(calls).toBe(2);
+    } finally {
+      Object.defineProperty(globalThis, "crypto", {
+        value: realCrypto,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
+
   it("maps the accepted sample to min + (sample % range) when min is non-zero", () => {
     // Production contract (src/crypto-utils.ts): the return value is
     // min + (buf[0] % range). Existing tests in this file only pin the

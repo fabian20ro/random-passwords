@@ -582,6 +582,13 @@ describe("generateComplexPassword", () => {
     expect(pw).toBe("");
   });
 
+  it("returns an empty string when categories is an empty array", () => {
+    // Guard clause `categories.length === 0` must return "" before any sampling,
+    // distinct from "a category is empty" (which requires at least one category).
+    const pw = generateComplexPassword(10, []);
+    expect(pw).toBe("");
+  });
+
   it("returns an empty string if length is less than categories.length", () => {
     const categories = [["abc"], ["123"], ["!@#"]];
     const length = categories.length - 1;

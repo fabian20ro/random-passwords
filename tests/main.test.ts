@@ -35,6 +35,7 @@ let created: Element[];
 beforeEach(() => {
   vi.resetModules();
   vi.clearAllMocks();
+  vi.mocked(generateAll).mockImplementation(() => ["safe"]);
   elements = new Map(["passwords", "usernames", "status", "sr-status", "regenerate", "no-ambiguous"]
     .map(id => [id, new Element()]));
   created = [];
@@ -124,6 +125,16 @@ it("announces a generation error when password generation throws", async () => {
   expect(status.textContent).toBe("boom");
   expect(status.style.color).toBe("var(--error-color, #e74c3c)");
   expect(elements.get("sr-status")!.textContent).toBe("boom");
+});
+
+it("announces the default-mode generation count for passwords and usernames", async () => {
+  await import("../src/main");
+  expect(elements.get("status")!.textContent).toBe(
+    "Generated 1 new passwords and 1 usernames.",
+  );
+  expect(elements.get("sr-status")!.textContent).toBe(
+    "Generated 1 new passwords and 1 usernames.",
+  );
 });
 
 it("announces complex generation with the selected category labels", async () => {
