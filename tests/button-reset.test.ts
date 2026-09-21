@@ -921,6 +921,35 @@ describe("cancelButtonReset", () => {
       expect(() => scheduleButtonReset(null as any, 100, reset)).toThrow(/target/);
     });
 
+    it ("throws the documented guard message for every non-object target and leaves busy targets intact", () => {
+      // scheduleButtonReset and cancelButtonReset share assertObjectTarget, so
+      // schedule must throw the identical documented TypeError for null,
+      // undefined, and primitive targets — and, like the ±Infinity guard, the
+      // throw must happen before the clear, leaving other targets untouched.
+      const reset = vi.fn();
+      const busyTarget = { id: "schedule-guard-busy" };
+      scheduleButtonReset(busyTarget, 100, reset);
+
+      for (const bad of [null as unknown as object, undefined as unknown as object, "string" as unknown as object, 42 as unknown as object]) {
+        const sentinel = { id: `sched-guard-sentinel-${String(bad)}` };
+        expect(resetTimeouts.has(sentinel)).toBe(false);
+
+        try {
+          scheduleButtonReset(bad, 100, vi.fn());
+        } catch (e) {
+          expect(e).toBeInstanceOf(TypeError);
+          expect((e as TypeError).message).toBe("cancelButtonReset requires an object target");
+        }
+
+        expect(resetTimeouts.has(sentinel)).toBe(false);
+      }
+
+      // Busy target must remain scheduled — the guard throws before any clear.
+      expect(resetTimeouts.has(busyTarget)).toBe(true);
+      vi.advanceTimersByTime(150);
+      expect(reset).toHaveBeenCalledTimes(1);
+    });
+
     it ("throws TypeError with no-WeakMap mutation for null / undefined / primitive", () => {
       // Consolidated from two previously duplicate guard blocks. Each invalid type
       // must (a) throw TypeError, (b) leave a busy sentinel untouched, and (c) carry
