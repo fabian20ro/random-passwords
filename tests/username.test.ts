@@ -541,6 +541,15 @@ describe("username generation", () => {
       expect(validateUsername("1234_Otter_4821")).toBe(false);
     });
 
+    it("rejects a username whose second part is digits", () => {
+      // The second word group shares the first group's exact structure —
+      // [A-Z][a-z]+ or [a-z]+ — so a digit-led second word (e.g. "1234")
+      // matches neither alternative and the whole username is rejected.
+      // Complements the first-part digit test above for the second position.
+      expect(validateUsername("Clever_1234")).toBe(false);
+      expect(validateUsername("Clever_1234_4821")).toBe(false);
+    });
+
     it("rejects empty and single-word inputs (two word groups are required)", () => {
       // The regex mandates at least two underscore-separated word groups —
       // unlike the number suffix, which is the only optional element.
