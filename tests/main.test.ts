@@ -145,7 +145,7 @@ it("announces complex generation with the selected category labels", async () =>
   await import("../src/main");
   expect(generateComplexPassword).toHaveBeenCalledTimes(3);
   expect(elements.get("status")!.textContent).toBe(
-    "Generated 3 complex passwords using Uppercase (A-Z), Lowercase (a-z).",
+    "Generated 3 complex passwords using Uppercase (A-Z), Lowercase (a-z) and 1 usernames.",
   );
 });
 
@@ -160,6 +160,6 @@ it("generates one combined password and skips the duplicate for a single selecte
     { ambiguityFree: true },
   );
   expect(elements.get("status")!.textContent).toBe(
-    "Generated 1 complex passwords using Uppercase (A-Z).",
+    "Generated 1 complex passwords using Uppercase (A-Z) and 1 usernames.",
   );
 });
