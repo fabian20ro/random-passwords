@@ -1651,6 +1651,18 @@ describe("getResetDescription", () => {
     expect(getResetDescription(fresh)).toBeUndefined();
   });
 
+  it ("returns undefined for a scheduled target whose description was never set", () => {
+    // Documented branch: targets whose description was never set report
+    // undefined — distinct from the unscheduled-target case above, the
+    // reset is genuinely pending here (getters are read-only).
+    const target = { id: "get-desc-never-set" };
+    scheduleButtonReset(target, 100, vi.fn());
+
+    expect(isResetScheduled(target)).toBe(true);
+    expect(resetDescriptions.has(target)).toBe(false);
+    expect(getResetDescription(target)).toBeUndefined();
+  });
+
   it ("does not store description when scheduleButtonReset receives empty string", () => {
     // Contract invariant: empty descriptions carry no semantic content and are rejected.
     const target = { id: "get-desc-empty-reject" };
