@@ -820,4 +820,38 @@ describe("getSecureRandomInt", () => {
       });
     }
   });
+
+  it("returns the accepted sample when MAX_ATTEMPTS-1 rejections precede a valid sample (loop bound)", () => {
+    // The sampling loop is `for (let attempts = 0; attempts < MAX_ATTEMPTS; attempts++)`
+    // with MAX_ATTEMPTS = 256, so all 256 attempts are budgeted and exhaustion only
+    // throws when every attempt is rejected. Existing tests pin the all-rejected
+    // exhaustion path and the single-rejection retry path, but not the boundary:
+    // 255 consecutive rejections followed by an accepted sample on the final
+    // attempt must return that sample instead of throwing.
+    const realCrypto = (globalThis as any).crypto;
+    let callCount = 0;
+    Object.defineProperty(globalThis, "crypto", {
+      value: {
+        getRandomValues(arr: Uint32Array) {
+          callCount++;
+          // max=7: UINT32_MODULUS%7=4, so 0xFFFFFFFF is always rejected;
+          // the 256th (final) attempt is accepted. 0x10 % 7 === 2.
+          arr[0] = callCount < 256 ? 0xFFFFFFFF : 0x10;
+          return arr;
+        },
+      },
+      configurable: true,
+      writable: true,
+    });
+    try {
+      expect(getSecureRandomInt(7)).toBe(2);
+      expect(callCount).toBe(256); // every attempt budgeted, none wasted
+    } finally {
+      Object.defineProperty(globalThis, "crypto", {
+        value: realCrypto,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
 });
