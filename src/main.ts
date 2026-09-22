@@ -156,7 +156,7 @@ function generate(): void {
 
     if (categories.length > 0) {
       const catNames = categories.map(cat => CATEGORY_DEFS.find(d => d.chars === cat[0])?.label ?? "Custom");
-      announceStatus(`Generated ${passwords.length} complex passwords using ${catNames.join(", ")}.`);
+      announceStatus(`Generated ${passwords.length} complex passwords using ${catNames.join(", ")} and ${usernames.length} usernames.`);
     } else {
       announceStatus(`Generated ${passwords.length} new passwords and ${usernames.length} usernames.`);
     }

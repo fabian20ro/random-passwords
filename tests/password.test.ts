@@ -819,6 +819,14 @@ describe("generatePasswordAmbiguityFree", () => {
     expect(generatePasswordAmbiguityFree(2.5)).toBe("");
   });
 
+  it("throws an error when length exceeds MAX_LENGTH", () => {
+    // Wrapper over generatePasswordWithCharset must inherit the MAX_LENGTH guard —
+    // matching the same contract tested for generatePassword and the with-symbols variant.
+    expect(() => generatePasswordAmbiguityFree(MAX_LENGTH + 1)).toThrow(
+      `Length exceeds maximum allowed: ${MAX_LENGTH}`,
+    );
+  });
+
   it("produces a 24-character string with zero occurrences of each ambiguous character across 100 iterations", () => {
     const ambiguous = ["0", "O", "1", "I", "l"];
     for (let i = 0; i < 100; i++) {
