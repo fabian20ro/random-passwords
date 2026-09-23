@@ -845,6 +845,19 @@ describe("generatePasswordAmbiguityFree", () => {
     );
   });
 
+  it("handles the inclusive maximum length (MAX_LENGTH)", () => {
+    // generatePasswordWithCharset permits length up to and including MAX_LENGTH —
+    // the ambiguity-free wrapper must return a full-length password at the boundary,
+    // mirroring the with-symbols variant tested at the same inclusive boundary.
+    const length = MAX_LENGTH;
+    const pw = generatePasswordAmbiguityFree(length);
+    expect(pw).toHaveLength(length);
+    // Every character must come from the ambiguity-free set — no 0/O/l/I/1.
+    for (const c of pw) {
+      expect(["0", "O", "l", "I", "1"]).not.toContain(c);
+    }
+  });
+
   it("produces a 24-character string with zero occurrences of each ambiguous character across 100 iterations", () => {
     const ambiguous = ["0", "O", "1", "I", "l"];
     for (let i = 0; i < 100; i++) {
