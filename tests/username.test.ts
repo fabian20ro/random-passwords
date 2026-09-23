@@ -558,5 +558,16 @@ describe("username generation", () => {
       expect(validateUsername("Clever")).toBe(false);
       expect(validateUsername("clever")).toBe(false);
     });
+
+    it("accepts generateUsername output (producer-consumer round-trip)", () => {
+      // Locks in the producer→consumer contract: every username produced by
+      // generateUsername must pass validateUsername. Catches regex divergence
+      // that independent unit tests (each with its own hardcoded pattern) miss.
+      for (let i = 0; i < 50; i++) {
+        expect(validateUsername(generateUsername())).toBe(true);
+        expect(validateUsername(generateUsername(false, true))).toBe(true);
+        expect(validateUsername(generateUsername(false))).toBe(true);
+      }
+    });
   });
 });
