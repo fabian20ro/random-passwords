@@ -253,6 +253,32 @@ describe("scheduleButtonReset", () => {
     expect(reset).toHaveBeenCalledTimes(1);
   });
 
+  it ("throws the finite-delay guard even when the reset is also invalid (no masking)", () => {
+    // Compound guard-ordering: when BOTH the delay and the reset callback are
+    // invalid, the finite-delay guard must still throw — the `reset` early
+    // return must not mask a subsequent non-finite delay. The source comment
+    // documents exactly this: "an invalid reset must not mask a subsequent
+    // undefined/Infinity delay from triggering its guard." Every existing guard
+    // test passes only ONE invalid input, so the compound case is unobserved.
+    const target = { id: "compound-guard" };
+    const preexisting = vi.fn();
+    scheduleButtonReset(target, 500, preexisting);
+    expect(isResetScheduled(target)).toBe(true);
+
+    // Non-finite delay + non-function reset: must throw the delay guard, not
+    // silently return via the reset guard, and must leave the existing schedule
+    // intact so it still fires at its own time.
+    expect(() => scheduleButtonReset(target, Infinity, "not-a-function" as any))
+      .toThrowError(TypeError, "delayMs must be finite");
+
+    expect(isResetScheduled(target)).toBe(true);
+    expect(resetTimeouts.has(target)).toBe(true);
+    vi.advanceTimersByTime(499);
+    expect(preexisting).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(preexisting).toHaveBeenCalledTimes(1);
+  });
+
   it ("does not throw for non-numeric delayMs — the finite guard only rejects non-finite numbers", () => {
     // Contract asymmetry: the top-of-function guard only rejects non-finite
     // *numbers* (±Infinity). Other types bypass it entirely and fall through
