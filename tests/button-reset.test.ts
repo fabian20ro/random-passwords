@@ -700,6 +700,30 @@ describe("scheduleButtonReset", () => {
     // the inner callback was vi.fn() — verify no error thrown and entry cleared
     expect(resetTimeouts.has(target)).toBe(false);
   });
+
+  it ("hides the description from inside the reset callback — delete-before-fire ordering", () => {
+    // Companion to the cancel-path test above: the *fire* path deletes
+    // resetDescriptions BEFORE invoking reset() (source cleanup order), so a
+    // getResetDescription call made from inside the callback must see
+    // undefined. This is the distinct distinction: cancel defers the delete
+    // past the hook, fire runs it before the callback.
+    const target = { id: "fire-desc-order" };
+    let seenDuringFire: string | undefined;
+
+    scheduleButtonReset(target, 100, () => {
+      seenDuringFire = getResetDescription(target);
+    }, "fire-visible-before");
+
+    // Pre-fire the description is visible.
+    expect(getResetDescription(target)).toBe("fire-visible-before");
+
+    vi.advanceTimersByTime(100);
+
+    // Counterexample: if a regression reorders the description cleanup to
+    // run AFTER reset(), the callback would observe the stale string instead
+    // of undefined — this assertion distinguishes that.
+    expect(seenDuringFire).toBeUndefined();
+  });
 });
 
 describe("isResetScheduled", () => {
