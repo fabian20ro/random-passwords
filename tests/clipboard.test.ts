@@ -610,6 +610,10 @@ describe("copyTextToClipboard", () => {
     // No existing test asserts the selection range arguments.
     const setSelectionRangeSpy = (capturedEl as any).setSelectionRange;
     expect(setSelectionRangeSpy).toHaveBeenCalledWith(0, "secret".length);
+    // select() must run before execCommand("copy") — removing it would leave
+    // only setSelectionRange, which some browsers ignore on hidden textareas.
+    const selectSpy = (capturedEl as any).select;
+    expect(selectSpy).toHaveBeenCalledTimes(1);
   });
 
   it("does not invoke fallback when modern clipboard API succeeds", async () => {
