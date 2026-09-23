@@ -526,6 +526,17 @@ describe("username generation", () => {
       expect(validateUsername("cLever_otter_4821")).toBe(false);
     });
 
+    it("accepts a cross-word case mix (each word matches independently)", () => {
+      // The two word groups each allow [A-Z][a-z]+ OR [a-z]+ independently,
+      // unlike the within-word mixed-case rejection above. A Capitalized first
+      // word paired with an all-lowercase second word still matches the regex.
+      // Pins the per-word independence so a future refactor that forces both
+      // words to share a case class would be caught here.
+      expect(validateUsername("Clever_otter_4821")).toBe(true);
+      expect(validateUsername("clever_Otter_4821")).toBe(true);
+      expect(validateUsername("Clever_otter")).toBe(true);
+    });
+
     it("accepts a two-part username without the optional number suffix", () => {
       // The suffix group in the validation regex is optional — a
       // Capitalized_Title or all-lowercase Adjective_Noun (no number) is valid.
@@ -557,6 +568,17 @@ describe("username generation", () => {
       expect(validateUsername("")).toBe(false);
       expect(validateUsername("Clever")).toBe(false);
       expect(validateUsername("clever")).toBe(false);
+    });
+
+    it("accepts generateUsername output (producer-consumer round-trip)", () => {
+      // Locks in the producer→consumer contract: every username produced by
+      // generateUsername must pass validateUsername. Catches regex divergence
+      // that independent unit tests (each with its own hardcoded pattern) miss.
+      for (let i = 0; i < 50; i++) {
+        expect(validateUsername(generateUsername())).toBe(true);
+        expect(validateUsername(generateUsername(false, true))).toBe(true);
+        expect(validateUsername(generateUsername(false))).toBe(true);
+      }
     });
   });
 });

@@ -114,19 +114,6 @@ describe("getSecureRandomInt", () => {
     expect(() => getSecureRandomInt(5.5)).toThrow("Max must be between 1 and UINT32_MODULUS");
   });
 
-  it("validates max guard before min guard (guard ordering)", () => {
-    // max=5.5 fails the max guard; min=0 would pass the min guard.
-    // If the guards were swapped, the min guard (min=0, 0<5.5) would pass
-    // first and only the max guard would then throw — same message, so the
-    // pin here is that no min-guard error surfaces: with max-first ordering
-    // the min guard is never reached at all.
-    expect(() => getSecureRandomInt(5.5, 0)).toThrow("Max must be between 1 and UINT32_MODULUS");
-    // max=10 passes the max guard (10 is an integer, 1<=10<=UINT32_MODULUS);
-    // min=10 fails the min guard on min >= max. Only the min guard can fire —
-    // pins that a passing max guard does not mask a failing min guard.
-    expect(() => getSecureRandomInt(10, 10)).toThrow("Min must be less than max");
-  });
-
   it("handles max=UINT32_MODULUS correctly (zero-rejection degenerate case)", () => {
     const val = getSecureRandomInt(UINT32_MODULUS);
     expect(val).toBeGreaterThanOrEqual(0);

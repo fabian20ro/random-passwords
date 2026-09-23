@@ -587,6 +587,7 @@ describe("copyTextToClipboard", () => {
 
   it("selects the entire fallback textarea range before copying (setSelectionRange(0, value.length))", async () => {
     let capturedEl: unknown = null;
+    const copy = vi.fn(() => true);
 
     vi.stubGlobal("document", createFallbackStub({
       createElement: (tag: string) => {
@@ -601,6 +602,7 @@ describe("copyTextToClipboard", () => {
         capturedEl = el;
         return el as unknown as HTMLTextAreaElement;
       },
+      execCommandReturns: copy,
     }));
 
     await copyTextToClipboard(undefined, "secret");
@@ -614,6 +616,9 @@ describe("copyTextToClipboard", () => {
     // only setSelectionRange, which some browsers ignore on hidden textareas.
     const selectSpy = (capturedEl as any).select;
     expect(selectSpy).toHaveBeenCalledTimes(1);
+    expect(copy).toHaveBeenCalledWith('copy');
+    expect(selectSpy.mock.invocationCallOrder[0]).toBeLessThan(copy.mock.invocationCallOrder[0]);
+    expect(setSelectionRangeSpy.mock.invocationCallOrder[0]).toBeLessThan(copy.mock.invocationCallOrder[0]);
   });
 
   it("does not invoke fallback when modern clipboard API succeeds", async () => {
@@ -790,6 +795,35 @@ describe("copyTextToClipboard", () => {
 
     expect(result).toBe(false);
     clearTimeoutSpy.mockRestore();
+  });
+
+  it("falls back to execCommand when writeText times out (legacy path still attempted)", async () => {
+    const mockTextarea = {
+      value: "",
+      setAttribute: vi.fn(),
+      style: { position: "", left: "" },
+      select: vi.fn(),
+      setSelectionRange: vi.fn((_start: number, _end: number) => {}),
+    };
+
+    vi.stubGlobal("document", createFallbackStub({
+      execCommandReturns: true,
+      createElement: () => mockTextarea as unknown as HTMLTextAreaElement,
+    }));
+
+    // Never settles — the race must lose to the 10 ms timeout, after which the
+    // legacy execCommand path (stubbed above) must still run and succeed.
+    const clipboard = {
+      writeText(): Promise<void> {
+        return new Promise(() => {});
+      },
+    } satisfies Pick<Clipboard, "writeText">;
+
+    const result = await copyTextToClipboard(clipboard, "secret", 10, "via-fallback");
+
+    expect(result).toBe(true);
+    expect(getLastCopyLabel()).toBe("via-fallback");
+    vi.unstubAllGlobals();
   });
 
   it("returns false early when text exceeds MAX_CLIPBOARD_TEXT_BYTES (no DOM manipulation)", async () => {

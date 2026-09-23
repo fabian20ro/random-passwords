@@ -708,6 +708,24 @@ describe("generateComplexPassword", () => {
     }
   });
 
+  it("draws each mandatory category pick from the raw, un-deduplicated category entries", () => {
+    // generatePasswordWithCharset deduplicates its charset ("aab" yields a
+    // uniform 50/50 split, see "normalizes character weights when charset
+    // has duplicates") and the fill pool below also dedups via Set. The
+    // per-category pick, however, indexes the raw entry list, so a duplicated
+    // entry carries proportional weight in the mandatory pick. This pins that
+    // asymmetry: for category ["a","a","b"] a draw of 0 or 1 yields "a" and a
+    // draw of 2 yields "b". A change that deduplicated category pools would
+    // remap draw 1 to "b" and break this contract.
+    const categories = [["a", "a", "b"]];
+    const results = [0, 1, 2].map((draw) => {
+      installCryptoMock([draw]);
+      return generateComplexPassword(1, categories);
+    });
+    restoreCryptoMock();
+    expect(results).toEqual(["a", "a", "b"]);
+  });
+
   it("returns an empty string when all category sub-arrays are empty", () => {
     const categories: string[][] = [[], [], []];
     const length = 10;
@@ -825,6 +843,19 @@ describe("generatePasswordAmbiguityFree", () => {
     expect(() => generatePasswordAmbiguityFree(MAX_LENGTH + 1)).toThrow(
       `Length exceeds maximum allowed: ${MAX_LENGTH}`,
     );
+  });
+
+  it("handles the inclusive maximum length (MAX_LENGTH)", () => {
+    // generatePasswordWithCharset permits length up to and including MAX_LENGTH —
+    // the ambiguity-free wrapper must return a full-length password at the boundary,
+    // mirroring the with-symbols variant tested at the same inclusive boundary.
+    const length = MAX_LENGTH;
+    const pw = generatePasswordAmbiguityFree(length);
+    expect(pw).toHaveLength(length);
+    // Every character must come from the ambiguity-free set — no 0/O/l/I/1.
+    for (const c of pw) {
+      expect(["0", "O", "l", "I", "1"]).not.toContain(c);
+    }
   });
 
   it("produces a 24-character string with zero occurrences of each ambiguous character across 100 iterations", () => {
