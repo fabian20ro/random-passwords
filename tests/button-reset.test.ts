@@ -291,6 +291,14 @@ describe("scheduleButtonReset", () => {
     expect(resetTimeouts.has(strTarget)).toBe(true);
     expect(isResetScheduled(strTarget)).toBe(true);
 
+    // Coercion timing: the string must fire at the coerced +500 ms, not at 0 —
+    // the state assertions above still pass if a regression coerces the
+    // non-numeric delay to 0 ms, so the firing time is the distinguishing check.
+    vi.advanceTimersByTime(499);
+    expect(strReset).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(strReset).toHaveBeenCalledTimes(1);
+
     // Booleans coerce inside Math.max: true → 1ms.
     const boolTarget = { id: "delay-non-numeric-bool" };
     const boolReset = vi.fn();
