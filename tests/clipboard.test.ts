@@ -797,6 +797,35 @@ describe("copyTextToClipboard", () => {
     clearTimeoutSpy.mockRestore();
   });
 
+  it("falls back to execCommand when writeText times out (legacy path still attempted)", async () => {
+    const mockTextarea = {
+      value: "",
+      setAttribute: vi.fn(),
+      style: { position: "", left: "" },
+      select: vi.fn(),
+      setSelectionRange: vi.fn((_start: number, _end: number) => {}),
+    };
+
+    vi.stubGlobal("document", createFallbackStub({
+      execCommandReturns: true,
+      createElement: () => mockTextarea as unknown as HTMLTextAreaElement,
+    }));
+
+    // Never settles — the race must lose to the 10 ms timeout, after which the
+    // legacy execCommand path (stubbed above) must still run and succeed.
+    const clipboard = {
+      writeText(): Promise<void> {
+        return new Promise(() => {});
+      },
+    } satisfies Pick<Clipboard, "writeText">;
+
+    const result = await copyTextToClipboard(clipboard, "secret", 10, "via-fallback");
+
+    expect(result).toBe(true);
+    expect(getLastCopyLabel()).toBe("via-fallback");
+    vi.unstubAllGlobals();
+  });
+
   it("returns false early when text exceeds MAX_CLIPBOARD_TEXT_BYTES (no DOM manipulation)", async () => {
     const createElementSpy = vi.fn();
     vi.stubGlobal("document", {
