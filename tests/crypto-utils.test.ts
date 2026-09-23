@@ -114,6 +114,19 @@ describe("getSecureRandomInt", () => {
     expect(() => getSecureRandomInt(5.5)).toThrow("Max must be between 1 and UINT32_MODULUS");
   });
 
+  it("validates max guard before min guard (guard ordering)", () => {
+    // max=5.5 fails the max guard; min=0 would pass the min guard.
+    // If the guards were swapped, the min guard (min=0, 0<5.5) would pass
+    // first and only the max guard would then throw — same message, so the
+    // pin here is that no min-guard error surfaces: with max-first ordering
+    // the min guard is never reached at all.
+    expect(() => getSecureRandomInt(5.5, 0)).toThrow("Max must be between 1 and UINT32_MODULUS");
+    // max=10 passes the max guard (10 is an integer, 1<=10<=UINT32_MODULUS);
+    // min=10 fails the min guard on min >= max. Only the min guard can fire —
+    // pins that a passing max guard does not mask a failing min guard.
+    expect(() => getSecureRandomInt(10, 10)).toThrow("Min must be less than max");
+  });
+
   it("handles max=UINT32_MODULUS correctly (zero-rejection degenerate case)", () => {
     const val = getSecureRandomInt(UINT32_MODULUS);
     expect(val).toBeGreaterThanOrEqual(0);
@@ -812,6 +825,78 @@ describe("getSecureRandomInt", () => {
       for (const receiver of seenReceivers) {
         expect(receiver).toBe(cryptoObj);
       }
+    } finally {
+      Object.defineProperty(globalThis, "crypto", {
+        value: realCrypto,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
+
+  it("returns the accepted sample when MAX_ATTEMPTS-1 rejections precede a valid sample (loop bound)", () => {
+    // The sampling loop is `for (let attempts = 0; attempts < MAX_ATTEMPTS; attempts++)`
+    // with MAX_ATTEMPTS = 256, so all 256 attempts are budgeted and exhaustion only
+    // throws when every attempt is rejected. Existing tests pin the all-rejected
+    // exhaustion path and the single-rejection retry path, but not the boundary:
+    // 255 consecutive rejections followed by an accepted sample on the final
+    // attempt must return that sample instead of throwing.
+    const realCrypto = (globalThis as any).crypto;
+    let callCount = 0;
+    Object.defineProperty(globalThis, "crypto", {
+      value: {
+        getRandomValues(arr: Uint32Array) {
+          callCount++;
+          // max=7: UINT32_MODULUS%7=4, so 0xFFFFFFFF is always rejected;
+          // the 256th (final) attempt is accepted. 0x10 % 7 === 2.
+          arr[0] = callCount < 256 ? 0xFFFFFFFF : 0x10;
+          return arr;
+        },
+      },
+      configurable: true,
+      writable: true,
+    });
+    try {
+      expect(getSecureRandomInt(7)).toBe(2);
+      expect(callCount).toBe(256); // every attempt budgeted, none wasted
+    } finally {
+      Object.defineProperty(globalThis, "crypto", {
+        value: realCrypto,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
+
+  it("maps min offset at max=UINT32_MODULUS with positive min (non-degenerate rejection zone)", () => {
+    // The max=UINT32_MODULUS test uses min=0, where range = UINT32_MODULUS and
+    // the mapping degenerates to returning the raw uint32. With positive min,
+    // range = UINT32_MODULUS - min, and since UINT32_MODULUS = range + min,
+    // UINT32_MODULUS % range === min — the rejection zone is non-empty with
+    // width min, so threshold === range and 0xFFFFFFFF is rejected. An
+    // accepted sample of 0 maps to 0 % range === 0 → result is exactly min.
+    // No existing test pins this max-boundary × min-offset combination.
+    const min = 100;
+    const max = UINT32_MODULUS;
+    const realCrypto = (globalThis as any).crypto;
+    let callCount = 0;
+    Object.defineProperty(globalThis, "crypto", {
+      value: {
+        getRandomValues(arr: Uint32Array) {
+          callCount++;
+          arr[0] = callCount === 1 ? 0xFFFFFFFF : 0; // rejected, then accepted
+          return arr;
+        },
+      },
+      configurable: true,
+      writable: true,
+    });
+    try {
+      const result = getSecureRandomInt(max, min);
+      expect(result).toBeGreaterThanOrEqual(min);
+      expect(result).toBeLessThan(max);
+      expect(result).toBe(min); // 0 % (max - min) === 0, offset by min
+      expect(callCount).toBe(2); // 0xFFFFFFFF rejected at threshold, then accepted
     } finally {
       Object.defineProperty(globalThis, "crypto", {
         value: realCrypto,
