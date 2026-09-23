@@ -867,4 +867,42 @@ describe("getSecureRandomInt", () => {
       });
     }
   });
+
+  it("maps min offset at max=UINT32_MODULUS with positive min (non-degenerate rejection zone)", () => {
+    // The max=UINT32_MODULUS test uses min=0, where range = UINT32_MODULUS and
+    // the mapping degenerates to returning the raw uint32. With positive min,
+    // range = UINT32_MODULUS - min, and since UINT32_MODULUS = range + min,
+    // UINT32_MODULUS % range === min — the rejection zone is non-empty with
+    // width min, so threshold === range and 0xFFFFFFFF is rejected. An
+    // accepted sample of 0 maps to 0 % range === 0 → result is exactly min.
+    // No existing test pins this max-boundary × min-offset combination.
+    const min = 100;
+    const max = UINT32_MODULUS;
+    const realCrypto = (globalThis as any).crypto;
+    let callCount = 0;
+    Object.defineProperty(globalThis, "crypto", {
+      value: {
+        getRandomValues(arr: Uint32Array) {
+          callCount++;
+          arr[0] = callCount === 1 ? 0xFFFFFFFF : 0; // rejected, then accepted
+          return arr;
+        },
+      },
+      configurable: true,
+      writable: true,
+    });
+    try {
+      const result = getSecureRandomInt(max, min);
+      expect(result).toBeGreaterThanOrEqual(min);
+      expect(result).toBeLessThan(max);
+      expect(result).toBe(min); // 0 % (max - min) === 0, offset by min
+      expect(callCount).toBe(2); // 0xFFFFFFFF rejected at threshold, then accepted
+    } finally {
+      Object.defineProperty(globalThis, "crypto", {
+        value: realCrypto,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
 });
