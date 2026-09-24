@@ -307,6 +307,10 @@ describe("username generation", () => {
       const lowMaxAttempts = 10;
       const result = generateUsernames(100, lowMaxAttempts);
       expect(result.length).toBeLessThanOrEqual(100);
+      // Each loop iteration consumes one attempt and adds at most one unique
+      // username, so the result can never exceed the attempt budget — a
+      // budget-ignoring loop (returning all 100) would violate this bound.
+      expect(result.length).toBeLessThanOrEqual(lowMaxAttempts);
       expect(result.length).toBeGreaterThan(0);
 
       // Even truncated results must be unique and well-formed.
