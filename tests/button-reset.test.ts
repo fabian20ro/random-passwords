@@ -168,6 +168,44 @@ describe("scheduleButtonReset", () => {
     expect(reset).toHaveBeenCalledTimes(1);
   });
 
+  it ("observes cleared timeout and description state from inside the reset callback — fire-path cleanup ordering", () => {
+    // Companion to the cancel-path ordering test: the *natural-fire* path
+    // deletes the timeout and description entries BEFORE invoking reset()
+    // (source cleanup order). A regression that moves the cleanup to run
+    // after reset() would still pass every fire-path test, because they only
+    // assert state observed outside the callback. This assertion inspects the
+    // state as seen from inside it.
+    const target = { id: "fire-observes-cleanup" };
+    const reset = vi.fn();
+    let seenScheduledDuringFire: boolean | undefined;
+    let seenDescriptionDuringFire: string | undefined;
+
+    scheduleButtonReset(target, 100, () => {
+      if (seenScheduledDuringFire === undefined) {
+        seenScheduledDuringFire = isResetScheduled(target);
+        seenDescriptionDuringFire = getResetDescription(target);
+      }
+      reset();
+    }, "fire-observed-desc");
+
+    expect(isResetScheduled(target)).toBe(true);
+    expect(getResetDescription(target)).toBe("fire-observed-desc");
+
+    vi.advanceTimersByTime(100);
+
+    expect(reset).toHaveBeenCalledTimes(1);
+    // Both entries are deleted before reset() runs — the callback sees the
+    // cleared state, not the pending one.
+    expect(seenScheduledDuringFire).toBe(false);
+    expect(seenDescriptionDuringFire).toBeUndefined();
+
+    // After the fire, all entries are cleared and nothing re-fires.
+    expect(isResetScheduled(target)).toBe(false);
+    expect(getResetDescription(target)).toBeUndefined();
+    vi.advanceTimersByTime(500);
+    expect(reset).toHaveBeenCalledTimes(1);
+  });
+
   it ("uses DEFAULT_RESET_DELAY_MS when delayMs is omitted (default parameter)", () => {
     const target = { id: "defaults-to-300" };
     const reset = vi.fn();
@@ -290,6 +328,14 @@ describe("scheduleButtonReset", () => {
     expect(() => scheduleButtonReset(strTarget, "500" as any, strReset)).not.toThrow();
     expect(resetTimeouts.has(strTarget)).toBe(true);
     expect(isResetScheduled(strTarget)).toBe(true);
+
+    // Coercion timing: the string must fire at the coerced +500 ms, not at 0 —
+    // the state assertions above still pass if a regression coerces the
+    // non-numeric delay to 0 ms, so the firing time is the distinguishing check.
+    vi.advanceTimersByTime(499);
+    expect(strReset).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(strReset).toHaveBeenCalledTimes(1);
 
     // Booleans coerce inside Math.max: true → 1ms.
     const boolTarget = { id: "delay-non-numeric-bool" };
