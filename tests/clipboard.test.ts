@@ -648,6 +648,33 @@ describe("copyTextToClipboard", () => {
     vi.unstubAllGlobals();
   });
 
+  it("does not mount the hidden textarea when the modern clipboard API succeeds", async () => {
+    const createElementSpy = vi.fn();
+    const appendChildSpy = vi.fn();
+    vi.stubGlobal("document", {
+      createElement: createElementSpy,
+      execCommand: vi.fn(() => false),
+      body: { appendChild: appendChildSpy, removeChild: vi.fn() },
+    });
+
+    const writes: string[] = [];
+    const clipboard = {
+      async writeText(text: string): Promise<void> {
+        writes.push(text);
+      },
+    } satisfies Pick<Clipboard, "writeText">;
+
+    const result = await copyTextToClipboard(clipboard, "secret");
+
+    // Modern path success: writeText is the sole transport; the legacy fallback
+    // (and with it the hidden textarea it mounts) must never be reached.
+    expect(result).toBe(true);
+    expect(writes).toEqual(["secret"]);
+    expect(createElementSpy).not.toHaveBeenCalled();
+    expect(appendChildSpy).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
   it("returns false early in insecure context (no DOM manipulation)", async () => {
     const createElementSpy = vi.fn();
     vi.stubGlobal("window", { isSecureContext: false });
