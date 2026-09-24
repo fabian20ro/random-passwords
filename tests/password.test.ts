@@ -174,6 +174,35 @@ describe("generatePassword", () => {
     }
   });
 
+  it("returns a later retry sample once it satisfies the diversity minimum", () => {
+    // Pin the retry loop itself: each first-attempt draw is 0 → all-'A' (one
+    // class), each second-attempt draw alternates 0/26 → 'A'/'a' (two classes).
+    // With maxRetries=2 the diverse second attempt must be returned as-is — no
+    // fallback injection. The exact output distinguishes a loop that skips the
+    // diversity check (would return all-'A'); the exact call count (2L draws per
+    // slot) distinguishes a loop that falls through to injectMissingClasses,
+    // which would consume L + L + 1 draws instead.
+    const script: number[] = [];
+    for (const L of LENGTHS) {
+      for (let i = 0; i < L; i++) script.push(0); // attempt 1: single class only
+      for (let i = 0; i < L; i++) script.push(i % 2 === 0 ? 0 : 26); // attempt 2: two classes
+    }
+    const getCalls = installCryptoMock(script);
+    const passwords = generateAll(1, { maxRetries: 2 });
+    expect(passwords).toHaveLength(LENGTHS.length);
+    passwords.forEach((pw, i) => {
+      const L = LENGTHS[i];
+      const expected = "Aa".repeat(Math.floor(L / 2)) + (L % 2 === 1 ? "A" : "");
+      expect(pw).toBe(expected);
+      const classes =
+        (/[A-Z]/.test(pw) ? 1 : 0) +
+        (/[a-z]/.test(pw) ? 1 : 0) +
+        (/[0-9]/.test(pw) ? 1 : 0);
+      expect(classes).toBe(2);
+    });
+    expect(getCalls()).toBe(LENGTHS.reduce((sum, L) => sum + 2 * L, 0));
+  });
+
   it("injectMissingClasses tracks per-class slots to prevent cross-class overwrite", () => {
     // Force many retries exhausted so the fallback path runs reliably; verify that
     // when multiple classes are injected, each class occupies a distinct slot.
