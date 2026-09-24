@@ -163,3 +163,18 @@ it("generates one combined password and skips the duplicate for a single selecte
     "Generated 1 complex passwords using Uppercase (A-Z) and 1 usernames.",
   );
 });
+
+it("auto-regenerates when a category checkbox toggles and updates the status", async () => {
+  const upper = new Element(); upper.checked = true;
+  const lower = new Element(); lower.checked = true;
+  elements.set("cat-upper", upper);
+  elements.set("cat-lower", lower);
+  await import("../src/main");
+  expect(generateComplexPassword).toHaveBeenCalledTimes(3);
+  lower.checked = false;
+  lower.fire("change");
+  expect(generateComplexPassword).toHaveBeenCalledTimes(4);
+  expect(elements.get("status")!.textContent).toBe(
+    "Generated 1 complex passwords using Uppercase (A-Z) and 1 usernames.",
+  );
+});
