@@ -213,6 +213,20 @@ describe("getSecureRandomInt", () => {
     expect(() => getSecureRandomInt(10, 0.5)).toThrow("Min must be a non-negative integer");
   });
 
+  it("accepts min of -0 (negative zero) as the 0 boundary", () => {
+    // Existing min tests use positive integers and the non-integer/NaN/Infinity
+    // throws. -0 is the one signed boundary value the guard family must accept:
+    // `-0 < 0` is false and `Number.isInteger(-0)` is true, so production maps
+    // it to min === 0 and returns values in [0, max). Pins the mapping in case
+    // a regression makes the guard reject the zero boundary.
+    const max = 10;
+    for (let i = 0; i < 50; i++) {
+      const val = getSecureRandomInt(max, -0);
+      expect(val).toBeGreaterThanOrEqual(0);
+      expect(val).toBeLessThan(max);
+    }
+  });
+
   it("throws if max exceeds Number.MAX_SAFE_INTEGER", () => {
     // MAX_SAFE_INTEGER > UINT32_MODULUS so the guard rejects it on range
     expect(() => getSecureRandomInt(Number.MAX_SAFE_INTEGER)).toThrow();
