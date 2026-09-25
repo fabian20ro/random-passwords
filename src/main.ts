@@ -168,4 +168,8 @@ function generate(): void {
 
 document.getElementById("regenerate")?.addEventListener("click", generate);
 noAmbiguousCheckbox?.addEventListener("change", generate);
+for (const def of CATEGORY_DEFS) {
+  const catCheckbox = document.getElementById(`cat-${def.id}`) as HTMLInputElement | null;
+  catCheckbox?.addEventListener("change", generate);
+}
 generate();

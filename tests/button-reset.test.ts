@@ -1798,6 +1798,23 @@ describe("getResetDescription", () => {
     expect(resetDescriptions.has(target)).toBe(false);
   });
 
+  it ("clears a previously-stored description when rescheduled with an explicit empty string", () => {
+    const target = { id: "get-desc-reschedule-empty" };
+    scheduleButtonReset(target, 200, vi.fn(), "stale-descriptor");
+    expect(getResetDescription(target)).toBe("stale-descriptor");
+    expect(resetDescriptions.has(target)).toBe(true);
+
+    // Compound path (unobserved by the two tests above, which each pass a
+    // single boundary input): the internal cancel (cancelButtonReset) deletes
+    // the stale description, and the explicit "" is rejected for re-storage
+    // (description !== ""), so no description entry may survive the reschedule
+    // — the getter must report undefined, not the stale value and not "".
+    scheduleButtonReset(target, 150, vi.fn(), "");
+
+    expect(getResetDescription(target)).toBeUndefined();
+    expect(resetDescriptions.has(target)).toBe(false);
+  });
+
   it ("returns undefined for null target without throwing or leaking", () => {
     const sentinel = { id: "get-desc-null-sentinel" };
     scheduleButtonReset({ id: "pre-null" }, 100, vi.fn(), "busy-desc");
