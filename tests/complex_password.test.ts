@@ -408,6 +408,43 @@ describe("getSecureRandomInt", () => {
     }
   });
 
+  it("accepts the maximum sample below the threshold (complement of the strict-< boundary)", () => {
+    // Production contract (src/crypto-utils.ts): acceptance is `buf[0] <
+    // threshold`, so the largest acceptable sample is threshold - 1. For
+    // max=16, min=5 (range=11), UINT32_MODULUS % 11 = 4, threshold =
+    // 0xFFFFFFFC, so 0xFFFFFFFB is the maximum accepted value. Existing
+    // deterministic tests feed 0xFFFFFFFF (above threshold) or 0xFFFFFFFC
+    // (equal to it) — the accepted maximum is never pinned, so a threshold
+    // off-by-one (e.g., threshold - 1) would reject 0xFFFFFFFB, redraw, and
+    // return 5 with 2 draws. Feeding [0xFFFFFFFB, 5] must accept the first
+    // draw (1 call) and return 5 + (0xFFFFFFFB % 11) === 5 + 10 = 15, the
+    // maximum output value for that range. A regression that drops the min
+    // offset returns 10; the value and call-count assertions fail both.
+    const realCrypto = (globalThis as any).crypto;
+    const samples = [0xfffffffb, 5];
+    let calls = 0;
+    Object.defineProperty(globalThis, "crypto", {
+      value: {
+        getRandomValues(arr: Uint32Array) {
+          arr[0] = samples[calls++ % samples.length];
+          return arr;
+        },
+      },
+      configurable: true,
+      writable: true,
+    });
+    try {
+      expect(getSecureRandomInt(16, 5)).toBe(15);
+      expect(calls).toBe(1);
+    } finally {
+      Object.defineProperty(globalThis, "crypto", {
+        value: realCrypto,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
+
   it("aborts with the exact exhaustion message (MAX_ATTEMPTS = 256) when every sample is rejected", () => {
     // Production contract (src/crypto-utils.ts): the rejection-sampling loop
     // aborts after MAX_ATTEMPTS=256 attempts with a message that embeds the

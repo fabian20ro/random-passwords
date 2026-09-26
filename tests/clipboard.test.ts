@@ -1006,9 +1006,16 @@ describe("copyTextToClipboard", () => {
       },
     } satisfies Pick<Clipboard, "writeText">;
 
+    const before = Date.now();
     await copyTextToClipboard(clipboard, "secret", CLIPBOARD_TIMEOUT_MS, "fallback-label");
+    const after = Date.now();
 
     expect(getLastCopyLabel()).toBe("fallback-label");
+    // The copy succeeded via fallback — lastCopyAt must update just as it does on the modern-API path.
+    const atMs = getLastCopyAt()!;
+    expect(typeof atMs).toBe("number");
+    expect(atMs).toBeGreaterThanOrEqual(before);
+    expect(atMs).toBeLessThanOrEqual(after);
   });
 
   it("sets lastCopyAt to a recent timestamp after successful modern-API copy", async () => {
@@ -1190,10 +1197,12 @@ describe("probeClipboard", () => {
     });
 
     const start = Date.now();
-    await probeClipboard(100);
+    const result = await probeClipboard(100);
     const elapsed = Date.now() - start;
 
+    expect(result).toBe(false);
     expect(elapsed).toBeGreaterThanOrEqual(90); // allow small variance
+    expect(elapsed).toBeLessThan(1500); // must resolve on the 100 ms custom timeout, not the 3 s default
   });
 
   it("does not leak the timer when writeText resolves before timeout", async () => {
