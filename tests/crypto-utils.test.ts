@@ -228,8 +228,15 @@ describe("getSecureRandomInt", () => {
   });
 
   it("throws if max exceeds Number.MAX_SAFE_INTEGER", () => {
-    // MAX_SAFE_INTEGER > UINT32_MODULUS so the guard rejects it on range
-    expect(() => getSecureRandomInt(Number.MAX_SAFE_INTEGER)).toThrow();
+    // MAX_SAFE_INTEGER > UINT32_MODULUS so the guard rejects it on range.
+    // Pin the exact guard message: MAX_SAFE_INTEGER is an integer, > 0, and
+    // > UINT32_MODULUS, so it fires the `max > UINT32_MODULUS` disjunct and
+    // throws the range message. A bare toThrow() (the old form) would still
+    // pass if the guard were reworded or re-ordered into a differently-worded
+    // throw — this assertion catches that regression.
+    expect(() => getSecureRandomInt(Number.MAX_SAFE_INTEGER)).toThrow(
+      "Max must be between 1 and UINT32_MODULUS",
+    );
   });
 
   it("throws when Crypto API is unavailable (crypto missing)", () => {

@@ -588,6 +588,20 @@ describe("username generation", () => {
       expect(validateUsername("a_otter")).toBe(true);
     });
 
+    it("rejects a one-letter capitalized second word (second alternative also needs [a-z]+)", () => {
+      // Mirrors the one-letter first-word boundary above for the SECOND word
+      // group, which shares the first group's exact structure — [A-Z][a-z]+ or
+      // [a-z]+. A single capital (e.g. "A") matches neither alternative, while
+      // a single lowercase letter (e.g. "a") matches the all-lowercase branch.
+      // No existing input places a one-letter word in the second position, so a
+      // relaxation of the second alternative to [A-Z][a-z]* would slip through.
+      expect(validateUsername("Clever_A")).toBe(false);
+      expect(validateUsername("Clever_A_4821")).toBe(false);
+      // Characterization: the all-lowercase alternative is [a-z]+ with no
+      // minimum — one lowercase letter is accepted in the second position too.
+      expect(validateUsername("Clever_a")).toBe(true);
+    });
+
     it("accepts generateUsername output (producer-consumer round-trip)", () => {
       // Locks in the producer→consumer contract: every username produced by
       // generateUsername must pass validateUsername. Catches regex divergence
