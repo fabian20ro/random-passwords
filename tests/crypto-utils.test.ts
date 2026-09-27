@@ -227,6 +227,21 @@ describe("getSecureRandomInt", () => {
     }
   });
 
+  it("throws if max is -0 (negative zero)", () => {
+    // The min family accepts -0 as the 0 boundary (test above). The max family
+    // is asymmetric: the range guard is `max <= 0`, and `-0 <= 0` is true, so
+    // -0 must be rejected with the range message. Existing max throw tests
+    // (0, -1, UINT32_MODULUS+1, MAX_SAFE_INTEGER, NaN, ±Infinity) all use
+    // values where `<` and `<=` agree — -0 is the one signed boundary where
+    // they differ. A regression that rewrites the guard as `max < 0` would let
+    // -0 past the range guard and surface a different message (e.g. "Min must
+    // be less than max" from the next guard) or exhaust sampling silently;
+    // this exact-message assertion pins the range guard as the catching one.
+    expect(() => getSecureRandomInt(-0)).toThrow(
+      "Max must be between 1 and UINT32_MODULUS",
+    );
+  });
+
   it("throws if max exceeds Number.MAX_SAFE_INTEGER", () => {
     // MAX_SAFE_INTEGER > UINT32_MODULUS so the guard rejects it on range.
     // Pin the exact guard message: MAX_SAFE_INTEGER is an integer, > 0, and
