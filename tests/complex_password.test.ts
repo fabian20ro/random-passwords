@@ -408,6 +408,42 @@ describe("getSecureRandomInt", () => {
     }
   });
 
+  it("returns min for the degenerate range-1 case (min offset under zero rejection)", () => {
+    // Production contract (src/crypto-utils.ts): for max=10, min=9, range=1,
+    // UINT32_MODULUS % 1 = 0, so threshold = UINT32_MODULUS and every uint32
+    // sample is accepted — zero rejection regardless of the sample. The result
+    // must be min + (buf[0] % 1) = 9. Existing min-offset tests in this file
+    // use range=5; none pin the min offset for the degenerate range-1 case, so
+    // a regression that special-cases range===1 (e.g. `if (range === 1)
+    // return 0`) would return 0 with a single draw and fail the value
+    // assertion. Feeding the worst-case sample 0xFFFFFFFF must still be
+    // accepted on the first draw — a threshold off-by-one that rejects it
+    // re-draws to exhaustion and fails both assertions.
+    const realCrypto = (globalThis as any).crypto;
+    const samples = [0xffffffff];
+    let calls = 0;
+    Object.defineProperty(globalThis, "crypto", {
+      value: {
+        getRandomValues(arr: Uint32Array) {
+          arr[0] = samples[calls++ % samples.length];
+          return arr;
+        },
+      },
+      configurable: true,
+      writable: true,
+    });
+    try {
+      expect(getSecureRandomInt(10, 9)).toBe(9);
+      expect(calls).toBe(1);
+    } finally {
+      Object.defineProperty(globalThis, "crypto", {
+        value: realCrypto,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
+
   it("accepts the maximum sample below the threshold (complement of the strict-< boundary)", () => {
     // Production contract (src/crypto-utils.ts): acceptance is `buf[0] <
     // threshold`, so the largest acceptable sample is threshold - 1. For
