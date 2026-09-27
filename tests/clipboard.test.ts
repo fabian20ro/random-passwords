@@ -333,6 +333,43 @@ describe("copyTextToClipboard", () => {
     await expect(copyTextToClipboard(clipboard, "fallback")).resolves.toBe(true);
   });
 
+  it("treats a falsy writeText resolution as success without invoking the legacy fallback", async () => {
+    // The modern branch settles the race on a falsy writeText resolution —
+    // only a throw, rejection, or timeout reaches the legacy path. The
+    // adjacent resolve-falsy test asserts only the final boolean, which passes
+    // whether or not the fallback ran; this pins the branch itself: no
+    // textarea mount, no execCommand, and last-copy metadata still recorded.
+    const createElementSpy = vi.fn();
+    const appendChildSpy = vi.fn();
+    const execCommandSpy = vi.fn();
+    vi.stubGlobal("document", {
+      createElement: createElementSpy,
+      execCommand: execCommandSpy,
+      body: { appendChild: appendChildSpy, removeChild: vi.fn() },
+    });
+
+    const clipboard = {
+      async writeText(): Promise<void> {
+        return Promise.resolve(false);
+      },
+    } satisfies Pick<Clipboard, "writeText">;
+
+    const before = Date.now();
+    const result = await copyTextToClipboard(clipboard, "secret", CLIPBOARD_TIMEOUT_MS, "resolve-falsy");
+    const after = Date.now();
+
+    expect(result).toBe(true);
+    expect(createElementSpy).not.toHaveBeenCalled();
+    expect(appendChildSpy).not.toHaveBeenCalled();
+    expect(execCommandSpy).not.toHaveBeenCalled();
+    expect(getLastCopyLabel()).toBe("resolve-falsy");
+    const atMs = getLastCopyAt()!;
+    expect(typeof atMs).toBe("number");
+    expect(atMs).toBeGreaterThanOrEqual(before);
+    expect(atMs).toBeLessThanOrEqual(after);
+    vi.unstubAllGlobals();
+  });
+
   it("returns true when writing a string with null bytes", async () => {
     const writes: string[] = [];
     const clipboard = {
