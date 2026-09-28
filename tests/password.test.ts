@@ -500,7 +500,12 @@ describe("generatePassword", () => {
   });
 
   it("throws error for lengths greater than MAX_LENGTH", () => {
-    expect(() => generatePassword(MAX_LENGTH + 1)).toThrow();
+    // Pin the exact guard message (src/password.ts:110) like the sibling
+    // complex/ambiguity-free tests — a bare .toThrow() would still pass if
+    // the message regressed to something generic.
+    expect(() => generatePassword(MAX_LENGTH + 1)).toThrow(
+      `Length exceeds maximum allowed: ${MAX_LENGTH}`,
+    );
   });
 
   it("handles getSecureRandomInt with max=1", () => {
