@@ -7,6 +7,11 @@ describe("username generation", () => {
       for (let i = 0; i < 200; i++) {
         const val = randomFourDigitNumber();
         expect(typeof val).toBe("number");
+        // A four-digit number is integral: a float-returning RNG (e.g. a
+        // missing floor) would still pass the range checks below but emit a
+        // malformed suffix. Integrality is asserted here, on the direct unit,
+        // so such a regression fails early and is failure-specific.
+        expect(Number.isInteger(val)).toBe(true);
         expect(val).toBeGreaterThanOrEqual(1000);
         expect(val).toBeLessThanOrEqual(9999);
       }
