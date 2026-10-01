@@ -89,6 +89,7 @@ it("schedules the copy-button reset with COPY_BUTTON_RESET_MS after a successful
   const main = await import("../src/main");
   const btn = created.find((el) => el.className === "copy-btn")!;
   await btn.onclick?.();
+  expect(btn.innerHTML).toContain('M3 8.5l3.5 3.5 6.5-8');
   expect(scheduleButtonReset).toHaveBeenLastCalledWith(btn, main.COPY_BUTTON_RESET_MS, expect.any(Function));
 });
 
