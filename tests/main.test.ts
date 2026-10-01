@@ -91,6 +91,10 @@ it("schedules the copy-button reset with COPY_BUTTON_RESET_MS after a successful
   await btn.onclick?.();
   expect(btn.innerHTML).toContain('M3 8.5l3.5 3.5 6.5-8');
   expect(scheduleButtonReset).toHaveBeenLastCalledWith(btn, main.COPY_BUTTON_RESET_MS, expect.any(Function));
+  const resetCalls = vi.mocked(scheduleButtonReset).mock.calls;
+  const resetFn = resetCalls[resetCalls.length - 1]![2] as unknown as () => void;
+  resetFn();
+  expect(btn.innerHTML).toContain('<rect x="5.5"');
 });
 
 it("announces the copy success to the visible and screen-reader status", async () => {
