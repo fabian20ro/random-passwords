@@ -23,7 +23,8 @@ class Element {
   classList = { add() {}, remove() {} };
   onclick?: () => void | Promise<void>;
   listeners = new Map<string, () => void>();
-  setAttribute() {}
+  attributes = new Map<string, string>();
+  setAttribute(name: string, value: string) { this.attributes.set(name, value); }
   appendChild() {}
   addEventListener(type: string, listener: () => void) { this.listeners.set(type, listener); }
   fire(type: string) { this.listeners.get(type)?.(); }
@@ -182,4 +183,43 @@ it("auto-regenerates when a category checkbox toggles and updates the status", a
   expect(elements.get("status")!.textContent).toBe(
     "Generated 1 complex passwords using Uppercase (A-Z) and 1 usernames.",
   );
+});
+
+it("labels username copy buttons contextually and preserves the password label", async () => {
+  await import("../src/main");
+  const buttons = created.filter((el) => el.className === "copy-btn");
+  const passwordButtons = buttons.filter((el) => el.attributes.get("aria-label")?.startsWith("Copy password"));
+  const usernameButtons = buttons.filter((el) => el.attributes.get("aria-label")?.startsWith("Copy username"));
+  expect(passwordButtons.length).toBe(1);
+  expect(usernameButtons.length).toBe(1);
+  expect(passwordButtons[0]!.attributes.get("aria-label")).toBe("Copy password (4 characters)");
+  expect(usernameButtons[0]!.attributes.get("aria-label")).toBe("Copy username (4 characters)");
+});
+
+it("restores the contextual username label after a successful copy", async () => {
+  await import("../src/main");
+  vi.mocked(copyTextToClipboard).mockResolvedValue(true);
+  const btn = created.find((el) =>
+    el.className === "copy-btn" && el.attributes.get("aria-label")?.startsWith("Copy username"),
+  )!;
+  await btn.onclick?.();
+  expect(btn.attributes.get("aria-label")).toBe("Password copied");
+  const resetCalls = vi.mocked(scheduleButtonReset).mock.calls;
+  const resetFn = resetCalls[resetCalls.length - 1]![2] as unknown as () => void;
+  resetFn();
+  expect(btn.attributes.get("aria-label")).toBe("Copy username (4 characters)");
+});
+
+it("announces the failure and restores the contextual username label after a failed copy", async () => {
+  await import("../src/main");
+  vi.mocked(copyTextToClipboard).mockResolvedValue(false);
+  const btn = created.find((el) =>
+    el.className === "copy-btn" && el.attributes.get("aria-label")?.startsWith("Copy username"),
+  )!;
+  await btn.onclick?.();
+  expect(elements.get("status")!.textContent).toBe("Copy failed. Clipboard access unavailable or denied.");
+  const resetCalls = vi.mocked(scheduleButtonReset).mock.calls;
+  const resetFn = resetCalls[resetCalls.length - 1]![2] as unknown as () => void;
+  resetFn();
+  expect(btn.attributes.get("aria-label")).toBe("Copy username (4 characters)");
 });
