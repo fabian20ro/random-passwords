@@ -45,14 +45,14 @@ function announceStatus(message: string, isError?: boolean): void {
   if (srStatusEl) srStatusEl.textContent = message;
 }
 
-function resetButtonState(btn: HTMLButtonElement): void {
+function resetButtonState(btn: HTMLButtonElement, label: string): void {
   btn.innerHTML = COPY_ICON;
   btn.classList.remove("copied", "error");
   btn.title = "";
-  btn.setAttribute("aria-label", DEFAULT_COPY_LABEL);
+  btn.setAttribute("aria-label", label);
 }
 
-async function copyToClipboard(text: string, btn: HTMLButtonElement): Promise<void> {
+async function copyToClipboard(text: string, btn: HTMLButtonElement, label: string): Promise<void> {
   const copied = await copyTextToClipboard(navigator.clipboard, text);
 
   if (copied) {
@@ -63,7 +63,7 @@ async function copyToClipboard(text: string, btn: HTMLButtonElement): Promise<vo
     announceStatus("Value copied to clipboard.");
 
     scheduleButtonReset(btn, COPY_BUTTON_RESET_MS, () => {
-      resetButtonState(btn);
+      resetButtonState(btn, label);
     });
     return;
   }
@@ -76,13 +76,13 @@ async function copyToClipboard(text: string, btn: HTMLButtonElement): Promise<vo
   announceStatus("Copy failed. Clipboard access unavailable or denied.", true);
 
   scheduleButtonReset(btn, 2000, () => {
-    resetButtonState(btn);
+    resetButtonState(btn, label);
   });
 }
 
 
 
-function renderRows(container: HTMLDivElement, values: string[]): void {
+function renderRows(container: HTMLDivElement, values: string[], baseLabel: string = DEFAULT_COPY_LABEL): void {
   container.innerHTML = "";
 
   values.forEach((value) => {
@@ -102,8 +102,8 @@ function renderRows(container: HTMLDivElement, values: string[]): void {
     btn.className = "copy-btn";
     btn.type = "button";
     btn.innerHTML = COPY_ICON;
-    btn.setAttribute("aria-label", `${DEFAULT_COPY_LABEL} (${len} characters)`);
-    btn.onclick = () => copyToClipboard(value, btn);
+    btn.setAttribute("aria-label", `${baseLabel} (${len} characters)`);
+    btn.onclick = () => copyToClipboard(value, btn, `${baseLabel} (${len} characters)`);
 
     row.appendChild(lenSpan);
     row.appendChild(code);
@@ -152,7 +152,7 @@ function generate(): void {
     const usernames = generateUsernames(USERNAME_COUNT);
 
     renderRows(passwordContainer, passwords);
-    renderRows(usernameContainer, usernames);
+    renderRows(usernameContainer, usernames, "Copy username");
 
     if (categories.length > 0) {
       const catNames = categories.map(cat => CATEGORY_DEFS.find(d => d.chars === cat[0])?.label ?? "Custom");
