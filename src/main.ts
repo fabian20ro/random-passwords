@@ -60,7 +60,7 @@ async function copyToClipboard(text: string, btn: HTMLButtonElement, label: stri
     btn.classList.remove("error");
     btn.classList.add("copied");
     btn.setAttribute("aria-label", COPIED_COPY_LABEL);
-    announceStatus("Value copied to clipboard.");
+    announceStatus(`Copied ${text.length} characters to clipboard.`);
 
     scheduleButtonReset(btn, COPY_BUTTON_RESET_MS, () => {
       resetButtonState(btn, label);
