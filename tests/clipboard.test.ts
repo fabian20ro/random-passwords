@@ -1410,6 +1410,17 @@ describe("copyTextToClipboard blob size limit", () => {
   });
 });
 
+describe("MAX_CLIPBOARD_TEXT_BYTES", () => {
+  it("pins the clipboard payload limit to 10240 bytes (~10 KiB)", () => {
+    // Every behavioral size-limit test derives its input from this constant
+    // (e.g. MAX_CLIPBOARD_TEXT_BYTES + 1) or from a literal sized against it,
+    // so all of them would still pass if the constant's value silently changed.
+    // This literal pin — mirroring the CLIPBOARD_TIMEOUT_MS and OVERSIZED_TEXT
+    // pins — is the only check that fails the moment the value drifts.
+    expect(MAX_CLIPBOARD_TEXT_BYTES).toBe(10240);
+  });
+});
+
 describe("OVERSIZED_TEXT", () => {
   it("is the exact sentinel string identifying oversized clipboard payloads", () => {
     expect(OVERSIZED_TEXT).toBe("oversized_text");
