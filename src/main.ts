@@ -25,8 +25,6 @@ const CATEGORY_DEFS: { id: string; label: string; chars: string }[] = [
   { id: "digits", label: "Digits (0-9)", chars: CHARSET_UPPER_LOWER_DIGIT.substring(52) },
 ];
 
-const noAmbiguousCheckbox = document.getElementById("no-ambiguous") as HTMLInputElement | null;
-
 const statusEl = document.getElementById("status") as HTMLParagraphElement;
 if (statusEl) statusEl.setAttribute("role", "status");
 
@@ -129,7 +127,7 @@ function generate(): void {
     const usernameContainer = document.getElementById("usernames") as HTMLDivElement;
 
     const categories = getSelectedCategories();
-    const options = { ambiguityFree: noAmbiguousCheckbox?.checked ?? true };
+    const options = { ambiguityFree: true };
     let passwords: string[];
 
     if (categories.length > 0) {
@@ -167,7 +165,6 @@ function generate(): void {
 }
 
 document.getElementById("regenerate")?.addEventListener("click", generate);
-noAmbiguousCheckbox?.addEventListener("change", generate);
 for (const def of CATEGORY_DEFS) {
   const catCheckbox = document.getElementById(`cat-${def.id}`) as HTMLInputElement | null;
   catCheckbox?.addEventListener("change", generate);
