@@ -37,11 +37,9 @@ beforeEach(() => {
   vi.resetModules();
   vi.clearAllMocks();
   vi.mocked(generateAll).mockImplementation(() => ["safe"]);
-  elements = new Map(["passwords", "usernames", "status", "sr-status", "regenerate", "no-ambiguous"]
+  elements = new Map(["passwords", "usernames", "status", "sr-status", "regenerate"]
     .map(id => [id, new Element()]));
   created = [];
-  const input = html.match(/<input\b[^>]*\bid="no-ambiguous"[^>]*>/)?.[0] ?? "";
-  elements.get("no-ambiguous")!.checked = /\bchecked(?:\s|=|>)/.test(input);
   vi.stubGlobal("document", {
     getElementById: (id: string) => elements.get(id) ?? null,
     createElement: () => {
@@ -53,37 +51,46 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
-it("starts checked and filters the first visible passwords", async () => {
+it("always generates ambiguity-free passwords on initial load", async () => {
   await import("../src/main");
-  expect(elements.get("no-ambiguous")!.checked).toBe(true);
   expect(generateAll).toHaveBeenLastCalledWith(1, { ambiguityFree: true });
 });
 
-it("changes regenerate immediately and Regenerate preserves the user's choice", async () => {
+it("keeps ambiguity-free generation on every Regenerate click", async () => {
   await import("../src/main");
-  const checkbox = elements.get("no-ambiguous")!;
-  checkbox.checked = false;
-  checkbox.fire("change");
-  expect(generateAll).toHaveBeenLastCalledWith(1, { ambiguityFree: false });
   elements.get("regenerate")!.fire("click");
-  expect(generateAll).toHaveBeenLastCalledWith(1, { ambiguityFree: false });
-  checkbox.checked = true;
-  checkbox.fire("change");
   expect(generateAll).toHaveBeenLastCalledWith(1, { ambiguityFree: true });
-  expect(generateAll).toHaveBeenCalledTimes(4);
+  elements.get("regenerate")!.fire("click");
+  expect(generateAll).toHaveBeenCalledTimes(3);
+  expect(generateAll).toHaveBeenLastCalledWith(1, { ambiguityFree: true });
 });
 
-it("uses the same checkbox option for category and combined passwords", async () => {
+it("uses ambiguity-free options for category and combined passwords", async () => {
   const upper = new Element(); upper.checked = true;
-  elements.set("cat-upper", upper);
-  await import("../src/main");
-  expect(generateComplexPassword).toHaveBeenLastCalledWith(DEFAULT_LENGTH, expect.any(Array), { ambiguityFree: true });
   const lower = new Element(); lower.checked = true;
+  elements.set("cat-upper", upper);
   elements.set("cat-lower", lower);
-  elements.get("no-ambiguous")!.checked = false;
-  elements.get("no-ambiguous")!.fire("change");
+  await import("../src/main");
   expect(vi.mocked(generateComplexPassword).mock.calls.slice(-3))
-    .toEqual(Array.from({ length: 3 }, () => [DEFAULT_LENGTH, expect.any(Array), { ambiguityFree: false }]));
+    .toEqual(Array.from({ length: 3 }, () => [DEFAULT_LENGTH, expect.any(Array), { ambiguityFree: true }]));
+});
+
+it("renders no element with the removed no-ambiguous id", () => {
+  expect(html).not.toContain('id="no-ambiguous"');
+});
+
+it("renders no ambiguous characters across 100 regenerations", async () => {
+  const actual = await vi.importActual<typeof import("../src/password")>("../src/password");
+  vi.mocked(generateAll).mockImplementation((count, options) => actual.generateAll(count, options));
+  vi.mocked(generateComplexPassword).mockImplementation((length, categories, options) =>
+    actual.generateComplexPassword(length, categories, options));
+  await import("../src/main");
+  for (let i = 0; i < 100; i++) elements.get("regenerate")!.fire("click");
+  const codes = created.filter((el) => el.className === "" && el.attributes.size === 0);
+  expect(codes.length).toBeGreaterThan(100);
+  for (const code of codes) {
+    expect(code.textContent).not.toMatch(/[0OlI1]/);
+  }
 });
 
 it("schedules the copy-button reset with COPY_BUTTON_RESET_MS after a successful copy", async () => {
