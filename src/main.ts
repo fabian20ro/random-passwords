@@ -14,9 +14,13 @@ const CHECK_ICON = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" 
 const DEFAULT_COPY_LABEL = "Copy password";
 const COPIED_COPY_LABEL = "Password copied";
 const ERROR_COPY_LABEL = "Copy failed";
+const COPY_ALL_LABEL = "Copy all";
 
 
 const USERNAME_COUNT = 10;
+
+let lastPasswords: string[] = [];
+let lastUsernames: string[] = [];
 
 // Category definitions for complex password generation
 const CATEGORY_DEFS: { id: string; label: string; chars: string }[] = [
@@ -152,6 +156,9 @@ function generate(): void {
     renderRows(passwordContainer, passwords);
     renderRows(usernameContainer, usernames, "Copy username");
 
+    lastPasswords = passwords;
+    lastUsernames = usernames;
+
     if (categories.length > 0) {
       const catNames = categories.map(cat => CATEGORY_DEFS.find(d => d.chars === cat[0])?.label ?? "Custom");
       announceStatus(`Generated ${passwords.length} complex passwords using ${catNames.join(", ")} and ${usernames.length} usernames.`);
@@ -165,6 +172,12 @@ function generate(): void {
 }
 
 document.getElementById("regenerate")?.addEventListener("click", generate);
+document.getElementById("copy-all")?.addEventListener("click", () => {
+  const btn = document.getElementById("copy-all") as HTMLButtonElement | null;
+  if (!btn) return;
+  const all = [...lastPasswords, ...lastUsernames].join("\n");
+  void copyToClipboard(all, btn, COPY_ALL_LABEL);
+});
 for (const def of CATEGORY_DEFS) {
   const catCheckbox = document.getElementById(`cat-${def.id}`) as HTMLInputElement | null;
   catCheckbox?.addEventListener("change", generate);
