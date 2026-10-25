@@ -20,7 +20,11 @@ class Element {
   innerHTML = "";
   textContent = "";
   style = {};
-  classList = { add() {}, remove() {} };
+  classes = new Set<string>();
+  classList = {
+    add: (name: string) => this.classes.add(name),
+    remove: (name: string) => this.classes.delete(name),
+  };
   onclick?: () => void | Promise<void>;
   listeners = new Map<string, () => void>();
   attributes = new Map<string, string>();
@@ -37,7 +41,7 @@ beforeEach(() => {
   vi.resetModules();
   vi.clearAllMocks();
   vi.mocked(generateAll).mockImplementation(() => ["safe"]);
-  elements = new Map(["passwords", "usernames", "status", "sr-status", "regenerate"]
+  elements = new Map(["passwords", "usernames", "status", "sr-status", "regenerate", "copy-all"]
     .map(id => [id, new Element()]));
   created = [];
   vi.stubGlobal("document", {
@@ -229,4 +233,32 @@ it("announces the failure and restores the contextual username label after a fai
   const resetFn = resetCalls[resetCalls.length - 1]![2] as unknown as () => void;
   resetFn();
   expect(btn.attributes.get("aria-label")).toBe("Copy username (4 characters)");
+});
+
+it("copies all displayed passwords and usernames as one joined payload on Copy All", async () => {
+  await import("../src/main");
+  const btn = elements.get("copy-all")!;
+  await btn.fire("click");
+  expect(copyTextToClipboard).toHaveBeenLastCalledWith(undefined, "safe\nname");
+});
+
+it("marks Copy All with the copied state and reschedules the button reset", async () => {
+  await import("../src/main");
+  vi.mocked(copyTextToClipboard).mockResolvedValue(true);
+  const btn = elements.get("copy-all")!;
+  await btn.fire("click");
+  await Promise.resolve();
+  expect(btn.classes.has("copied")).toBe(true);
+  expect(btn.attributes.get("aria-label")).toBe("Password copied");
+  expect(scheduleButtonReset).toHaveBeenLastCalledWith(btn, expect.any(Number), expect.any(Function));
+});
+
+it("marks Copy All with the error state and announces the failure", async () => {
+  await import("../src/main");
+  vi.mocked(copyTextToClipboard).mockResolvedValue(false);
+  const btn = elements.get("copy-all")!;
+  await btn.fire("click");
+  await Promise.resolve();
+  expect(btn.classes.has("error")).toBe(true);
+  expect(elements.get("status")!.textContent).toBe("Copy failed. Clipboard access unavailable or denied.");
 });
