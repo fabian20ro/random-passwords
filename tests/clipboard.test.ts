@@ -212,6 +212,22 @@ describe("copyTextToClipboard", () => {
     expect(writes).toEqual([]);
   });
 
+  it("writes the payload unmodified when text has surrounding whitespace (trim is validation-only, not normalization)", async () => {
+    const writes: string[] = [];
+    const clipboard = {
+      async writeText(text: string): Promise<void> {
+        writes.push(text);
+      },
+    } satisfies Pick<Clipboard, "writeText">;
+    const paddedText = " secret ";
+
+    // Surrounding whitespace must pass validation and be copied byte-for-byte:
+    // if a "sanitize" refactor trimmed the payload, the clipboard would hold a
+    // string different from what the caller provided.
+    await expect(copyTextToClipboard(clipboard, paddedText)).resolves.toBe(true);
+    expect(writes).toEqual([paddedText]);
+  });
+
   it("returns true when writeText is a synchronous function", async () => {
     let called = false;
     const clipboard = {
