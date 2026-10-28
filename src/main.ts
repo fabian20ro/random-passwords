@@ -54,7 +54,7 @@ function resetButtonState(btn: HTMLButtonElement, label: string): void {
   btn.setAttribute("aria-label", label);
 }
 
-async function copyToClipboard(text: string, btn: HTMLButtonElement, label: string): Promise<void> {
+async function copyToClipboard(text: string, btn: HTMLButtonElement, label: string, successMsg?: string): Promise<void> {
   const copied = await copyTextToClipboard(navigator.clipboard, text);
 
   if (copied) {
@@ -62,7 +62,7 @@ async function copyToClipboard(text: string, btn: HTMLButtonElement, label: stri
     btn.classList.remove("error");
     btn.classList.add("copied");
     btn.setAttribute("aria-label", COPIED_COPY_LABEL);
-    announceStatus(`Copied ${text.length} characters to clipboard.`);
+    announceStatus(successMsg ?? `Copied ${text.length} characters to clipboard.`);
 
     scheduleButtonReset(btn, COPY_BUTTON_RESET_MS, () => {
       resetButtonState(btn, label);
@@ -176,7 +176,8 @@ document.getElementById("copy-all")?.addEventListener("click", () => {
   const btn = document.getElementById("copy-all") as HTMLButtonElement | null;
   if (!btn) return;
   const all = [...lastPasswords, ...lastUsernames].join("\n");
-  void copyToClipboard(all, btn, COPY_ALL_LABEL);
+  const itemCount = lastPasswords.length + lastUsernames.length;
+  void copyToClipboard(all, btn, COPY_ALL_LABEL, `Copied ${itemCount} items (${all.length} characters) to clipboard.`);
 });
 for (const def of CATEGORY_DEFS) {
   const catCheckbox = document.getElementById(`cat-${def.id}`) as HTMLInputElement | null;

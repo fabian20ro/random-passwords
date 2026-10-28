@@ -132,6 +132,30 @@ it("announces copy failure and schedules the reset after 2000 ms", async () => {
   expect(scheduleButtonReset).toHaveBeenLastCalledWith(btn, 2000, expect.any(Function));
 });
 
+it("announces the copy-all item count alongside the character count", async () => {
+  await import("../src/main");
+  vi.mocked(copyTextToClipboard).mockResolvedValue(true);
+  elements.get("copy-all")!.fire("click");
+  await vi.waitFor(() => {
+    expect(elements.get("status")!.textContent)
+      .toBe("Copied 2 items (9 characters) to clipboard.");
+  });
+  expect(elements.get("sr-status")!.textContent)
+    .toBe("Copied 2 items (9 characters) to clipboard.");
+});
+
+it("announces copy-all failure and marks the button with the error class", async () => {
+  await import("../src/main");
+  vi.mocked(copyTextToClipboard).mockResolvedValue(false);
+  const btn = elements.get("copy-all")!;
+  btn.fire("click");
+  await vi.waitFor(() => {
+    expect(btn.classes.has("error")).toBe(true);
+  });
+  expect(elements.get("status")!.textContent)
+    .toBe("Copy failed. Clipboard access unavailable or denied.");
+});
+
 it("announces a generation error when password generation throws", async () => {
   await import("../src/main");
   vi.mocked(generateAll).mockImplementation(() => {
