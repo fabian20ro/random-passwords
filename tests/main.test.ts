@@ -205,6 +205,26 @@ it("generates one combined password and skips the duplicate for a single selecte
   );
 });
 
+it("labels each complex password row with its category and the combined row last", async () => {
+  const upper = new Element(); upper.checked = true;
+  const lower = new Element(); lower.checked = true;
+  elements.set("cat-upper", upper);
+  elements.set("cat-lower", lower);
+  await import("../src/main");
+  const labels = created.filter((el) => el.className === "cat-label");
+  expect(labels.length).toBe(3);
+  expect(labels[0]!.textContent).toBe("Uppercase (A-Z)");
+  expect(labels[labels.length - 1]!.textContent).toBe("Combined");
+  const firstLabel = created.find((el) => el.className === "cat-label")!;
+  const firstLen = created.find((el) => el.className === "len")!;
+  expect(created.indexOf(firstLabel)).toBeLessThan(created.indexOf(firstLen));
+});
+
+it("renders no category label spans in default mode", async () => {
+  await import("../src/main");
+  expect(created.some((el) => el.className === "cat-label")).toBe(false);
+});
+
 it("auto-regenerates when a category checkbox toggles and updates the status", async () => {
   const upper = new Element(); upper.checked = true;
   const lower = new Element(); lower.checked = true;

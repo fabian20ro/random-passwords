@@ -84,14 +84,21 @@ async function copyToClipboard(text: string, btn: HTMLButtonElement, label: stri
 
 
 
-function renderRows(container: HTMLDivElement, values: string[], baseLabel: string = DEFAULT_COPY_LABEL): void {
+function renderRows(container: HTMLDivElement, values: string[], baseLabel: string = DEFAULT_COPY_LABEL, labels?: string[]): void {
   container.innerHTML = "";
 
-  values.forEach((value) => {
+  values.forEach((value, index) => {
     const len = value.length;
 
     const row = document.createElement("div");
     row.className = "row";
+
+    if (labels && labels.length === values.length) {
+      const catLabel = document.createElement("span");
+      catLabel.className = "cat-label";
+      catLabel.textContent = labels[index] ?? "";
+      row.appendChild(catLabel);
+    }
 
     const lenSpan = document.createElement("span");
     lenSpan.className = "len";
@@ -133,6 +140,7 @@ function generate(): void {
     const categories = getSelectedCategories();
     const options = { ambiguityFree: true };
     let passwords: string[];
+    let labels: string[] | undefined = undefined;
 
     if (categories.length > 0) {
       // Complex mode: generate one password per category for direct copy-paste,
@@ -146,6 +154,10 @@ function generate(): void {
         const categoryPasswords = categories.map(cat => generateComplexPassword(complexLen, [cat], options));
         const combined = generateComplexPassword(complexLen, categories, options);
         passwords = [...categoryPasswords, combined].filter(pw => pw.length > 0);
+        labels = [
+          ...categories.map(cat => CATEGORY_DEFS.find(d => d.chars === cat[0])?.label ?? "Custom"),
+          "Combined",
+        ];
       }
     } else {
       passwords = generateAll(1, options);
@@ -153,7 +165,7 @@ function generate(): void {
 
     const usernames = generateUsernames(USERNAME_COUNT);
 
-    renderRows(passwordContainer, passwords);
+    renderRows(passwordContainer, passwords, DEFAULT_COPY_LABEL, labels);
     renderRows(usernameContainer, usernames, "Copy username");
 
     lastPasswords = passwords;
