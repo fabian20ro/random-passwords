@@ -106,6 +106,7 @@ function renderRows(container: HTMLDivElement, values: string[], baseLabel: stri
 
     const code = document.createElement("code");
     code.textContent = value;
+    code.style.userSelect = "all";
 
     const btn = document.createElement("button");
     btn.className = "copy-btn";

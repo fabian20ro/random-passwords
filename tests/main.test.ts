@@ -132,6 +132,17 @@ it("announces copy failure and schedules the reset after 2000 ms", async () => {
   expect(scheduleButtonReset).toHaveBeenLastCalledWith(btn, 2000, expect.any(Function));
 });
 
+it("selects the full password on a single click for manual copy fallback", async () => {
+  await import("../src/main");
+  const codes = created.filter((el) => el.className === "" && el.attributes.size === 0);
+  expect(codes.length).toBeGreaterThan(0);
+  for (const code of codes) {
+    expect(code.style.userSelect).toBe("all");
+  }
+  const btn = created.find((el) => el.className === "copy-btn")!;
+  expect(btn.className).toBe("copy-btn");
+});
+
 it("announces the copy-all item count alongside the character count", async () => {
   await import("../src/main");
   vi.mocked(copyTextToClipboard).mockResolvedValue(true);
