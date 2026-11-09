@@ -1161,6 +1161,23 @@ describe("copyTextToClipboard", () => {
     expect(getLastCopyAt()).toBe(prevAt!);
   });
 
+  it("replaces last-copy metadata when a later copy succeeds", async () => {
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1000);
+    const clipboard = {
+      async writeText(_text: string) {},
+    } satisfies Pick<Clipboard, "writeText">;
+
+    await copyTextToClipboard(clipboard, "first", CLIPBOARD_TIMEOUT_MS, "first-label");
+    nowSpy.mockReturnValue(2000);
+    await copyTextToClipboard(clipboard, "second", CLIPBOARD_TIMEOUT_MS, "second-label");
+    nowSpy.mockRestore();
+
+    // "Most recent successful copy" — the second success must replace the
+    // metadata recorded by the first, not preserve it.
+    expect(getLastCopyLabel()).toBe("second-label");
+    expect(getLastCopyAt()).toBe(2000);
+  });
+
 }); // copyTextToClipboard describe block closes here
 
 describe("probeClipboard", () => {
