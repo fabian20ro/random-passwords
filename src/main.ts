@@ -50,7 +50,7 @@ function announceStatus(message: string, isError?: boolean): void {
 function resetButtonState(btn: HTMLButtonElement, label: string): void {
   btn.innerHTML = COPY_ICON;
   btn.classList.remove("copied", "error");
-  btn.title = "";
+  btn.title = label;
   btn.setAttribute("aria-label", label);
 }
 
@@ -113,6 +113,7 @@ function renderRows(container: HTMLDivElement, values: string[], baseLabel: stri
     btn.type = "button";
     btn.innerHTML = COPY_ICON;
     btn.setAttribute("aria-label", `${baseLabel} (${len} characters)`);
+    btn.title = `${baseLabel} (${len} characters)`;
     btn.onclick = () => copyToClipboard(value, btn, `${baseLabel} (${len} characters)`);
 
     row.appendChild(lenSpan);
