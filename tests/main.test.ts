@@ -19,6 +19,7 @@ class Element {
   className = "";
   innerHTML = "";
   textContent = "";
+  title = "";
   style = {};
   classes = new Set<string>();
   classList = {
@@ -107,6 +108,18 @@ it("schedules the copy-button reset with COPY_BUTTON_RESET_MS after a successful
   const resetFn = resetCalls[resetCalls.length - 1]![2] as unknown as () => void;
   resetFn();
   expect(btn.innerHTML).toContain('<rect x="5.5"');
+  expect(btn.title).toBe("Copy password (4 characters)");
+});
+
+it("shows a descriptive tooltip on the copy button and restores it after the reset", async () => {
+  await import("../src/main");
+  const btn = created.find((el) => el.className === "copy-btn")!;
+  expect(btn.title).toBe("Copy password (4 characters)");
+  await btn.onclick?.();
+  const resetCalls = vi.mocked(scheduleButtonReset).mock.calls;
+  const resetFn = resetCalls[resetCalls.length - 1]![2] as unknown as () => void;
+  resetFn();
+  expect(btn.title).toBe("Copy password (4 characters)");
 });
 
 it("announces the copy success to the visible and screen-reader status", async () => {
@@ -130,6 +143,7 @@ it("announces copy failure and schedules the reset after 2000 ms", async () => {
     "Copy failed. Clipboard access unavailable or denied.",
   );
   expect(scheduleButtonReset).toHaveBeenLastCalledWith(btn, 2000, expect.any(Function));
+  expect(btn.title).toBe("Clipboard access unavailable or denied");
 });
 
 it("selects the full password on a single click for manual copy fallback", async () => {
