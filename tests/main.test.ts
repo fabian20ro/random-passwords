@@ -115,6 +115,8 @@ it("shows a descriptive tooltip on the copy button and restores it after the res
   await import("../src/main");
   const btn = created.find((el) => el.className === "copy-btn")!;
   expect(btn.title).toBe("Copy password (4 characters)");
+  const lenSpan = created.find((el) => el.className === "len")!;
+  expect(lenSpan.title).toBe("4 characters");
   await btn.onclick?.();
   const resetCalls = vi.mocked(scheduleButtonReset).mock.calls;
   const resetFn = resetCalls[resetCalls.length - 1]![2] as unknown as () => void;

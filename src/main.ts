@@ -103,6 +103,7 @@ function renderRows(container: HTMLDivElement, values: string[], baseLabel: stri
     const lenSpan = document.createElement("span");
     lenSpan.className = "len";
     lenSpan.textContent = String(len);
+    lenSpan.title = `${len} characters`;
 
     const code = document.createElement("code");
     code.textContent = value;
