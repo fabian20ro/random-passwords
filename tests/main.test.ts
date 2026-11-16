@@ -154,6 +154,7 @@ it("selects the full password on a single click for manual copy fallback", async
   expect(codes.length).toBeGreaterThan(0);
   for (const code of codes) {
     expect(code.style.userSelect).toBe("all");
+    expect(code.title).toBe(code.textContent);
   }
   const btn = created.find((el) => el.className === "copy-btn")!;
   expect(btn.className).toBe("copy-btn");
