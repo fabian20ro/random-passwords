@@ -104,6 +104,7 @@ function renderRows(container: HTMLDivElement, values: string[], baseLabel: stri
     lenSpan.className = "len";
     lenSpan.textContent = String(len);
     lenSpan.title = `${len} characters`;
+    lenSpan.setAttribute("aria-label", `${len} characters`);
 
     const code = document.createElement("code");
     code.textContent = value;
