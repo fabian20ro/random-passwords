@@ -254,6 +254,17 @@ it("renders no category label spans in default mode", async () => {
   expect(created.some((el) => el.className === "cat-label")).toBe(false);
 });
 
+it("marks the results containers as a list and every row as a list item", async () => {
+  await import("../src/main");
+  expect(elements.get("passwords")!.attributes.get("role")).toBe("list");
+  expect(elements.get("usernames")!.attributes.get("role")).toBe("list");
+  const rows = created.filter((el) => el.className === "row");
+  expect(rows.length).toBeGreaterThan(0);
+  for (const row of rows) {
+    expect(row.attributes.get("role")).toBe("listitem");
+  }
+});
+
 it("auto-regenerates when a category checkbox toggles and updates the status", async () => {
   const upper = new Element(); upper.checked = true;
   const lower = new Element(); lower.checked = true;
