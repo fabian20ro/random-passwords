@@ -86,12 +86,14 @@ async function copyToClipboard(text: string, btn: HTMLButtonElement, label: stri
 
 function renderRows(container: HTMLDivElement, values: string[], baseLabel: string = DEFAULT_COPY_LABEL, labels?: string[]): void {
   container.innerHTML = "";
+  container.setAttribute("role", "list");
 
   values.forEach((value, index) => {
     const len = value.length;
 
     const row = document.createElement("div");
     row.className = "row";
+    row.setAttribute("role", "listitem");
 
     if (labels && labels.length === values.length) {
       const catLabel = document.createElement("span");
