@@ -1178,6 +1178,32 @@ describe("copyTextToClipboard", () => {
     expect(getLastCopyAt()).toBe(2000);
   });
 
+  it("does not update last-copy metadata when oversized text is rejected", async () => {
+    vi.unstubAllGlobals();
+    const clipboard = {
+      async writeText(_text: string) {},
+    } satisfies Pick<Clipboard, "writeText">;
+
+    await copyTextToClipboard(clipboard, "seed", CLIPBOARD_TIMEOUT_MS, "seed");
+    const prevLabel = getLastCopyLabel();
+    const prevAt = getLastCopyAt();
+    expect(prevLabel).toBe("seed");
+
+    // The oversized guard rejects the payload before the Clipboard API or the
+    // legacy fallback runs — a rejected copy must not overwrite the stored
+    // metadata from the most recent successful copy.
+    const rejected = await copyTextToClipboard(
+      clipboard,
+      "a".repeat(MAX_CLIPBOARD_TEXT_BYTES + 1),
+      CLIPBOARD_TIMEOUT_MS,
+      "oversized",
+    );
+
+    expect(rejected).toBe(false);
+    expect(getLastCopyLabel()).toBe("seed");
+    expect(getLastCopyAt()).toBe(prevAt!);
+  });
+
 }); // copyTextToClipboard describe block closes here
 
 describe("probeClipboard", () => {
